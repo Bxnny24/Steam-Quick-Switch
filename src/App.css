@@ -263,3 +263,16 @@ body {
   height: 16px;
   cursor: pointer;
 }
+
+.update-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 6px 10px;
+  font-size: 12px;
+  text-align: center;
+  color: #fff;
+  background: var(--current);
+}

@@ -43,6 +43,8 @@ pub fn run() {
             Some(vec!["--minimized"]),
         ))
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             tray::build_tray(app.handle())?;
             // Show the window on a normal launch; stay hidden when autostarted.

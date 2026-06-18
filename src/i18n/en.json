@@ -21,5 +21,9 @@
     "nameAccount": "Account name",
     "nicknames": "Nicknames",
     "nicknamePlaceholder": "Nickname"
+  },
+  "update": {
+    "downloading": "Downloading update {{version}}…",
+    "ready": "Restarting…"
   }
 }

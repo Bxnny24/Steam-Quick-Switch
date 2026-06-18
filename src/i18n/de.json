@@ -21,5 +21,9 @@
     "nameAccount": "Kontoname",
     "nicknames": "Spitznamen",
     "nicknamePlaceholder": "Spitzname"
+  },
+  "update": {
+    "downloading": "Update {{version}} wird geladen…",
+    "ready": "Neustart…"
   }
 }
