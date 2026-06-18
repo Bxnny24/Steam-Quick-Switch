@@ -1,3 +1,5 @@
+mod steam;
+
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -45,6 +47,12 @@ fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
+/// Return the Steam accounts known to this machine, for the switcher UI.
+#[tauri::command]
+fn list_accounts() -> Result<Vec<steam::Account>, String> {
+    steam::list_accounts()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -56,6 +64,7 @@ pub fn run() {
             build_tray(app.handle())?;
             Ok(())
         })
+        .invoke_handler(tauri::generate_handler![list_accounts])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
