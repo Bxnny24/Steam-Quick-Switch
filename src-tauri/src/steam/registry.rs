@@ -52,3 +52,19 @@ pub fn auto_login_user() -> Option<String> {
         Some(user)
     }
 }
+
+/// Point Steam at `account_name` for the next launch and remember the password.
+/// Writes to `HKCU` only, so no admin rights are required.
+pub fn set_auto_login_user(account_name: &str) -> Result<(), String> {
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let (steam, _) = hkcu
+        .create_subkey(STEAM_KEY)
+        .map_err(|e| format!("failed to open Steam registry key: {e}"))?;
+    steam
+        .set_value("AutoLoginUser", &account_name.to_string())
+        .map_err(|e| format!("failed to set AutoLoginUser: {e}"))?;
+    steam
+        .set_value("RememberPassword", &1u32)
+        .map_err(|e| format!("failed to set RememberPassword: {e}"))?;
+    Ok(())
+}

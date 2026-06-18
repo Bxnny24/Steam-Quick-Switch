@@ -7,6 +7,30 @@ fn list_accounts() -> Result<Vec<steam::Account>, String> {
     steam::list_accounts()
 }
 
+/// Switch the active Steam account (closes and relaunches Steam), then refresh
+/// the tray icon. The blocking work runs off the async runtime.
+#[tauri::command]
+async fn switch_account(
+    app: tauri::AppHandle,
+    account_name: String,
+    steam_id64: String,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let steam_path = steam::registry::steam_path()
+            .ok_or_else(|| "Steam installation not found".to_string())?;
+        steam::switch::switch_account(&steam_path, &account_name, &steam_id64)
+    })
+    .await
+    .map_err(|e| format!("switch task panicked: {e}"))??;
+
+    let handle = app.clone();
+    let _ = app.run_on_main_thread(move || {
+        tray::refresh_tray_icon(&handle);
+    });
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -18,7 +42,7 @@ pub fn run() {
             tray::build_tray(app.handle())?;
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![list_accounts])
+        .invoke_handler(tauri::generate_handler![list_accounts, switch_account])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
