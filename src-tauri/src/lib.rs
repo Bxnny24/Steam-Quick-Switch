@@ -37,9 +37,18 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             tray::show_main_window(app);
         }))
+        .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--minimized"]),
+        ))
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             tray::build_tray(app.handle())?;
+            // Show the window on a normal launch; stay hidden when autostarted.
+            if !std::env::args().any(|arg| arg == "--minimized") {
+                tray::show_main_window(app.handle());
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![list_accounts, switch_account])

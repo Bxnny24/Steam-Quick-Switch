@@ -27,4 +27,6 @@ keyvalues-parser = "0.2.4"
 winreg = "0.56.0"
 image = { version = "0.25.10", default-features = false, features = ["png"] }
 base64 = "0.22.1"
+tauri-plugin-store = "2.4.3"
+tauri-plugin-autostart = "2.5.1"
 

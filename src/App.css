@@ -203,3 +203,63 @@ body {
   color: var(--text-muted);
   text-align: center;
 }
+
+.app__actions {
+  display: flex;
+  gap: 6px;
+}
+.icon-button--ghost {
+  visibility: hidden;
+}
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow-y: auto;
+  flex: 1;
+}
+.settings__group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.settings__heading {
+  margin: 0 0 2px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+.settings__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+.settings__account {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings select,
+.settings input[type="text"] {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 13px;
+}
+.settings input[type="text"] {
+  width: 132px;
+}
+.settings input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}

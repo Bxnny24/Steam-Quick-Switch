@@ -1,17 +1,23 @@
 import { useCallback, useEffect, useState } from "react";
-import { Account, displayName, listAccounts, switchAccount } from "../lib/api";
+import { Account, listAccounts, switchAccount } from "../lib/api";
+import { Settings, loadSettings, resolveDisplayName } from "../lib/settings";
+import { SettingsView } from "./Settings";
 
 export function AccountSwitcher() {
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [switching, setSwitching] = useState<string | null>(null);
+  const [view, setView] = useState<"switcher" | "settings">("switcher");
 
-  const load = useCallback(async () => {
+  const loadAll = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      setAccounts(await listAccounts());
+      const [accs, setts] = await Promise.all([listAccounts(), loadSettings()]);
+      setAccounts(accs);
+      setSettings(setts);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -19,9 +25,17 @@ export function AccountSwitcher() {
     }
   }, []);
 
+  const reloadSettings = useCallback(async () => {
+    try {
+      setSettings(await loadSettings());
+    } catch (e) {
+      setError(String(e));
+    }
+  }, []);
+
   useEffect(() => {
-    load();
-  }, [load]);
+    loadAll();
+  }, [loadAll]);
 
   async function handleSwitch(account: Account) {
     if (switching || account.isCurrent) return;
@@ -30,7 +44,7 @@ export function AccountSwitcher() {
     try {
       await switchAccount(account);
       // Steam needs a moment to relaunch; then reflect the new active account.
-      window.setTimeout(load, 1500);
+      window.setTimeout(loadAll, 1500);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -38,18 +52,45 @@ export function AccountSwitcher() {
     }
   }
 
+  function nameOf(account: Account): string {
+    return settings
+      ? resolveDisplayName(account, settings)
+      : account.personaName.trim() || account.accountName;
+  }
+
+  if (view === "settings" && settings) {
+    return (
+      <SettingsView
+        accounts={accounts}
+        settings={settings}
+        onChanged={reloadSettings}
+        onClose={() => setView("switcher")}
+      />
+    );
+  }
+
   return (
     <div className="app">
       <header className="app__header">
         <h1 className="app__title">Steam Quick Switch</h1>
-        <button
-          className="icon-button"
-          onClick={load}
-          title="Refresh"
-          disabled={loading}
-        >
-          ⟳
-        </button>
+        <div className="app__actions">
+          <button
+            className="icon-button"
+            onClick={loadAll}
+            title="Refresh"
+            disabled={loading}
+          >
+            ⟳
+          </button>
+          <button
+            className="icon-button"
+            onClick={() => setView("settings")}
+            title="Settings"
+            disabled={!settings}
+          >
+            ⚙
+          </button>
+        </div>
       </header>
 
       {error && <div className="banner banner--error">{error}</div>}
@@ -78,12 +119,12 @@ export function AccountSwitcher() {
                       <img src={account.avatar} alt="" />
                     ) : (
                       <span className="account__avatar-fallback">
-                        {displayName(account).charAt(0).toUpperCase()}
+                        {nameOf(account).charAt(0).toUpperCase()}
                       </span>
                     )}
                   </span>
                   <span className="account__info">
-                    <span className="account__name">{displayName(account)}</span>
+                    <span className="account__name">{nameOf(account)}</span>
                     <span className="account__login">{account.accountName}</span>
                   </span>
                   <span className="account__status">
