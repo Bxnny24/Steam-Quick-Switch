@@ -1,6 +1,7 @@
 //! Steam integration: locating the install, reading accounts, and (later) switching.
 
 pub mod accounts;
+pub mod avatar;
 pub mod registry;
 pub mod vdf;
 
