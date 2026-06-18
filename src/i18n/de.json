@@ -1,0 +1,25 @@
+{
+  "app": {
+    "title": "Steam Quick Switch",
+    "refresh": "Aktualisieren",
+    "settings": "Einstellungen",
+    "loading": "Konten werden geladen…",
+    "noAccounts": "Keine gespeicherten Steam-Konten gefunden.",
+    "noAccountsHint": "Aktiviere „Passwort speichern“ beim Anmelden in Steam.",
+    "switching": "Wird gewechselt…",
+    "active": "Aktiv",
+    "accountCount_one": "{{count}} Konto",
+    "accountCount_other": "{{count}} Konten"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "back": "Zurück",
+    "language": "Sprache",
+    "autostart": "Mit Windows starten",
+    "displayName": "Angezeigter Name",
+    "nameProfile": "Profilname",
+    "nameAccount": "Kontoname",
+    "nicknames": "Spitznamen",
+    "nicknamePlaceholder": "Spitzname"
+  }
+}

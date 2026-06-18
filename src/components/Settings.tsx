@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { Account } from "../lib/api";
 import {
   Language,
@@ -9,6 +10,7 @@ import {
   setNameMode,
   setNickname,
 } from "../lib/settings";
+import i18n from "../i18n";
 
 interface Props {
   accounts: Account[];
@@ -19,10 +21,12 @@ interface Props {
 }
 
 export function SettingsView({ accounts, settings, onChanged, onClose }: Props) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
 
   async function changeLanguage(language: Language) {
     await setLanguage(language);
+    await i18n.changeLanguage(language);
     onChanged();
   }
 
@@ -49,17 +53,17 @@ export function SettingsView({ accounts, settings, onChanged, onClose }: Props) 
   return (
     <div className="app">
       <header className="app__header">
-        <button className="icon-button" onClick={onClose} title="Back">
+        <button className="icon-button" onClick={onClose} title={t("settings.back")}>
           ←
         </button>
-        <h1 className="app__title">Settings</h1>
+        <h1 className="app__title">{t("settings.title")}</h1>
         <span className="icon-button icon-button--ghost" aria-hidden="true" />
       </header>
 
       <div className="settings">
         <section className="settings__group">
           <label className="settings__row">
-            <span>Language</span>
+            <span>{t("settings.language")}</span>
             <select
               value={settings.language}
               onChange={(e) => changeLanguage(e.target.value as Language)}
@@ -70,7 +74,7 @@ export function SettingsView({ accounts, settings, onChanged, onClose }: Props) 
           </label>
 
           <label className="settings__row">
-            <span>Start with Windows</span>
+            <span>{t("settings.autostart")}</span>
             <input
               type="checkbox"
               checked={settings.autostart}
@@ -80,19 +84,19 @@ export function SettingsView({ accounts, settings, onChanged, onClose }: Props) 
           </label>
 
           <label className="settings__row">
-            <span>Display name</span>
+            <span>{t("settings.displayName")}</span>
             <select
               value={settings.nameMode}
               onChange={(e) => changeNameMode(e.target.value as NameMode)}
             >
-              <option value="persona">Profile name</option>
-              <option value="account">Account name</option>
+              <option value="persona">{t("settings.nameProfile")}</option>
+              <option value="account">{t("settings.nameAccount")}</option>
             </select>
           </label>
         </section>
 
         <section className="settings__group">
-          <h2 className="settings__heading">Nicknames</h2>
+          <h2 className="settings__heading">{t("settings.nicknames")}</h2>
           {accounts.map((account) => (
             <label className="settings__row" key={account.steamId64}>
               <span className="settings__account">
@@ -100,7 +104,7 @@ export function SettingsView({ accounts, settings, onChanged, onClose }: Props) 
               </span>
               <input
                 type="text"
-                placeholder="Nickname"
+                placeholder={t("settings.nicknamePlaceholder")}
                 defaultValue={settings.nicknames[account.steamId64] ?? ""}
                 onBlur={(e) => changeNickname(account.steamId64, e.target.value)}
               />

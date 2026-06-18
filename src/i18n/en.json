@@ -1,0 +1,25 @@
+{
+  "app": {
+    "title": "Steam Quick Switch",
+    "refresh": "Refresh",
+    "settings": "Settings",
+    "loading": "Loading accounts…",
+    "noAccounts": "No saved Steam accounts found.",
+    "noAccountsHint": "Enable “Remember password” when logging in to Steam.",
+    "switching": "Switching…",
+    "active": "Active",
+    "accountCount_one": "{{count}} account",
+    "accountCount_other": "{{count}} accounts"
+  },
+  "settings": {
+    "title": "Settings",
+    "back": "Back",
+    "language": "Language",
+    "autostart": "Start with Windows",
+    "displayName": "Display name",
+    "nameProfile": "Profile name",
+    "nameAccount": "Account name",
+    "nicknames": "Nicknames",
+    "nicknamePlaceholder": "Nickname"
+  }
+}

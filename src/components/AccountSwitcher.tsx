@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Account, listAccounts, switchAccount } from "../lib/api";
 import { Settings, loadSettings, resolveDisplayName } from "../lib/settings";
+import i18n from "../i18n";
 import { SettingsView } from "./Settings";
 
 export function AccountSwitcher() {
+  const { t } = useTranslation();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -18,6 +21,7 @@ export function AccountSwitcher() {
       const [accs, setts] = await Promise.all([listAccounts(), loadSettings()]);
       setAccounts(accs);
       setSettings(setts);
+      void i18n.changeLanguage(setts.language);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -72,12 +76,12 @@ export function AccountSwitcher() {
   return (
     <div className="app">
       <header className="app__header">
-        <h1 className="app__title">Steam Quick Switch</h1>
+        <h1 className="app__title">{t("app.title")}</h1>
         <div className="app__actions">
           <button
             className="icon-button"
             onClick={loadAll}
-            title="Refresh"
+            title={t("app.refresh")}
             disabled={loading}
           >
             ⟳
@@ -85,7 +89,7 @@ export function AccountSwitcher() {
           <button
             className="icon-button"
             onClick={() => setView("settings")}
-            title="Settings"
+            title={t("app.settings")}
             disabled={!settings}
           >
             ⚙
@@ -96,12 +100,12 @@ export function AccountSwitcher() {
       {error && <div className="banner banner--error">{error}</div>}
 
       {loading && accounts.length === 0 ? (
-        <div className="state">Loading accounts…</div>
+        <div className="state">{t("app.loading")}</div>
       ) : accounts.length === 0 ? (
         <div className="state">
-          No saved Steam accounts found.
+          {t("app.noAccounts")}
           <br />
-          Enable “Remember password” when logging in to Steam.
+          {t("app.noAccountsHint")}
         </div>
       ) : (
         <ul className="accounts">
@@ -129,9 +133,9 @@ export function AccountSwitcher() {
                   </span>
                   <span className="account__status">
                     {isSwitching
-                      ? "Switching…"
+                      ? t("app.switching")
                       : account.isCurrent
-                        ? "Active"
+                        ? t("app.active")
                         : ""}
                   </span>
                 </button>
@@ -142,7 +146,7 @@ export function AccountSwitcher() {
       )}
 
       <footer className="app__footer">
-        {accounts.length} account{accounts.length === 1 ? "" : "s"}
+        {t("app.accountCount", { count: accounts.length })}
       </footer>
     </div>
   );
