@@ -16,6 +16,7 @@ pub fn run() {
         ))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
+            settings::ensure_autostart_default(app.handle());
             tray::setup(app.handle())?;
             // Background auto-update check.
             let handle = app.handle().clone();

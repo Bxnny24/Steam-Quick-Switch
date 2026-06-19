@@ -4,6 +4,7 @@
 
 use serde_json::json;
 use tauri::AppHandle;
+use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_store::StoreExt;
 
 const STORE: &str = "settings.json";
@@ -47,6 +48,18 @@ pub fn set_name_mode(app: &AppHandle, mode: &str) {
     if let Ok(store) = app.store(STORE) {
         store.set("nameMode", json!(mode));
         let _ = store.save();
+    }
+}
+
+/// On first run, enable "start with Windows" by default (once). If the user
+/// later turns it off, it is not re-enabled.
+pub fn ensure_autostart_default(app: &AppHandle) {
+    if let Ok(store) = app.store(STORE) {
+        if store.get("autostartConfigured").is_none() {
+            let _ = app.autolaunch().enable();
+            store.set("autostartConfigured", json!(true));
+            let _ = store.save();
+        }
     }
 }
 
