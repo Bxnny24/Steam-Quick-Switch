@@ -21,6 +21,20 @@ pub fn show_main_window(app: &tauri::AppHandle) {
     }
 }
 
+/// Hide the window to the tray instead of quitting when the user closes it,
+/// so the app keeps running in the background.
+pub fn setup_close_to_tray(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let win = window.clone();
+        window.on_window_event(move |event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = win.hide();
+            }
+        });
+    }
+}
+
 /// Build the tray icon with a context menu, then apply the current avatar.
 /// Left click opens the switcher window, right click shows the menu.
 pub fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {

@@ -47,6 +47,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
             tray::build_tray(app.handle())?;
+            tray::setup_close_to_tray(app.handle());
             // Show the window on a normal launch; stay hidden when autostarted.
             if !std::env::args().any(|arg| arg == "--minimized") {
                 tray::show_main_window(app.handle());
