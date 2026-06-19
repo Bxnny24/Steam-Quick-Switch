@@ -1,19 +1,19 @@
 # Steam Quick Switch
 
 A lightweight Windows **tray app** to switch between your signed-in Steam
-accounts in one click. The tray icon shows the avatar of the account that is
-currently active.
+accounts in one click. It lives entirely in the system tray — there is no main
+window. The tray icon shows the avatar of the currently active account, and a
+click opens a menu of all your profiles.
 
 ## Features
 
-- Lives in the system tray — the tray icon is the current account's avatar
-- One-click switching between all remembered Steam accounts
+- No window — left- or right-click the tray icon for a menu of all your profiles
+- Each profile shows its Steam avatar; one click switches to it
+- The tray icon itself is the active account's avatar
 - Avatars and names read from Steam's local cache (no API key, works offline)
-- English and German (auto-detected, switchable)
-- Custom nicknames per account (right-click an account to rename it)
-- Settings: language and start with Windows
+- Settings right in the tray menu: language (English/German) and start with Windows
+- Custom nickname per account, set from the tray menu (a small input popup)
 - Automatic, cryptographically signed updates
-- Clean, modern light/dark UI
 
 ## How it works
 

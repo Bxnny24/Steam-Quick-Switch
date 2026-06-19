@@ -1,85 +1,128 @@
-//! System tray: dynamic avatar icon, tooltip, and context menu.
+//! System tray — the entire UI. A native menu lists all Steam accounts (with
+//! avatars) plus settings, and the tray icon shows the active account's avatar.
 
 use tauri::{
     image::Image,
-    menu::{Menu, MenuItem},
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager,
+    menu::{CheckMenuItem, IconMenuItem, Menu, MenuItem, PredefinedMenuItem, SubmenuBuilder},
+    tray::TrayIconBuilder,
+    AppHandle, Wry,
 };
+use tauri_plugin_autostart::ManagerExt;
 
 use crate::steam::{self, Account};
+use crate::{i18n, settings};
 
 pub const TRAY_ID: &str = "main-tray";
-const ICON_SIZE: u32 = 32;
+const TRAY_ICON_SIZE: u32 = 32;
+const MENU_ICON_SIZE: u32 = 18;
 
-/// Bring the main window to the foreground (used by the tray and single-instance).
-pub fn show_main_window(app: &tauri::AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.unminimize();
-        let _ = window.show();
-        let _ = window.set_focus();
+/// Display name: nickname > Steam profile name > account name.
+fn display_name(app: &AppHandle, account: &Account) -> String {
+    if let Some(nick) = settings::nickname(app, &account.steam_id64) {
+        if !nick.trim().is_empty() {
+            return nick;
+        }
+    }
+    if account.persona_name.trim().is_empty() {
+        account.account_name.clone()
+    } else {
+        account.persona_name.clone()
     }
 }
 
-/// Hide the window to the tray instead of quitting when the user closes it,
-/// so the app keeps running in the background.
-pub fn setup_close_to_tray(app: &tauri::AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        let win = window.clone();
-        window.on_window_event(move |event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = win.hide();
+fn menu_icon(steam_path: &std::path::Path, steam_id64: &str) -> Option<Image<'static>> {
+    let path = steam::avatar::avatar_path(steam_path, steam_id64)?;
+    let (rgba, size) = steam::avatar::round_icon_rgba(&path, MENU_ICON_SIZE)?;
+    Some(Image::new_owned(rgba, size, size))
+}
+
+/// Build the full tray menu from the current accounts and settings.
+fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
+    let lang = settings::language(app);
+    let l = i18n::labels(&lang);
+    let steam_path = steam::registry::steam_path();
+    let accounts = steam::list_accounts().unwrap_or_default();
+
+    let menu = Menu::new(app)?;
+
+    if accounts.is_empty() {
+        let item = MenuItem::with_id(app, "noop", l.no_accounts, false, None::<&str>)?;
+        menu.append(&item)?;
+    } else {
+        for account in &accounts {
+            let mut label = display_name(app, account);
+            if account.is_current {
+                label = format!("{label}  •  {}", l.active);
             }
-        });
+            let icon = steam_path
+                .as_deref()
+                .and_then(|p| menu_icon(p, &account.steam_id64));
+            let item = IconMenuItem::with_id(
+                app,
+                format!("switch:{}", account.steam_id64),
+                label.as_str(),
+                !account.is_current,
+                icon,
+                None::<&str>,
+            )?;
+            menu.append(&item)?;
+        }
     }
+
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+
+    if !accounts.is_empty() {
+        let mut rename = SubmenuBuilder::new(app, l.rename);
+        for account in &accounts {
+            rename = rename.text(
+                format!("rename:{}", account.steam_id64),
+                display_name(app, account),
+            );
+        }
+        let rename = rename.build()?;
+        menu.append(&rename)?;
+    }
+
+    // Settings submenu: language + autostart.
+    let lang_en =
+        CheckMenuItem::with_id(app, "lang:en", "English", true, lang == "en", None::<&str>)?;
+    let lang_de =
+        CheckMenuItem::with_id(app, "lang:de", "Deutsch", true, lang == "de", None::<&str>)?;
+    let lang_menu = SubmenuBuilder::new(app, l.language)
+        .item(&lang_en)
+        .item(&lang_de)
+        .build()?;
+    let autostart_on = app.autolaunch().is_enabled().unwrap_or(false);
+    let autostart =
+        CheckMenuItem::with_id(app, "autostart", l.autostart, true, autostart_on, None::<&str>)?;
+    let settings_menu = SubmenuBuilder::new(app, l.settings)
+        .item(&lang_menu)
+        .item(&autostart)
+        .build()?;
+    menu.append(&settings_menu)?;
+
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+    let quit = MenuItem::with_id(app, "quit", l.quit, true, None::<&str>)?;
+    menu.append(&quit)?;
+
+    Ok(menu)
 }
 
-/// Build the tray icon with a context menu, then apply the current avatar.
-/// Left click opens the switcher window, right click shows the menu.
-pub fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
-    let show_i = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
-    let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
-
-    TrayIconBuilder::with_id(TRAY_ID)
-        .icon(app.default_window_icon().unwrap().clone())
-        .tooltip("Steam Quick Switch")
-        .menu(&menu)
-        .show_menu_on_left_click(false)
-        .on_menu_event(|app, event| match event.id.as_ref() {
-            "show" => show_main_window(app),
-            "quit" => app.exit(0),
-            _ => {}
-        })
-        .on_tray_icon_event(|tray, event| {
-            if let TrayIconEvent::Click {
-                button: MouseButton::Left,
-                button_state: MouseButtonState::Up,
-                ..
-            } = event
-            {
-                show_main_window(tray.app_handle());
-            }
-        })
-        .build(app)?;
-
-    refresh_tray_icon(app);
-    Ok(())
+/// Rebuild and apply the tray menu and icon. Safe to call repeatedly.
+pub fn refresh(app: &AppHandle) {
+    if let Ok(menu) = build_menu(app) {
+        if let Some(tray) = app.tray_by_id(TRAY_ID) {
+            let _ = tray.set_menu(Some(menu));
+        }
+    }
+    refresh_icon(app);
 }
 
-/// Update the tray icon + tooltip to reflect the currently active account.
-/// Safe to call repeatedly (e.g. after a switch).
-pub fn refresh_tray_icon(app: &tauri::AppHandle) {
+fn refresh_icon(app: &AppHandle) {
     let Some(tray) = app.tray_by_id(TRAY_ID) else {
         return;
     };
-
-    let accounts = match steam::list_accounts() {
-        Ok(accounts) => accounts,
-        Err(_) => return,
-    };
-
+    let accounts = steam::list_accounts().unwrap_or_default();
     let Some(current) = accounts
         .iter()
         .find(|a| a.is_current)
@@ -87,26 +130,74 @@ pub fn refresh_tray_icon(app: &tauri::AppHandle) {
     else {
         return;
     };
-
     let _ = tray.set_tooltip(Some(format!(
         "Steam Quick Switch — {}",
-        display_name(current)
+        display_name(app, current)
     )));
-
     if let Some(steam_path) = steam::registry::steam_path() {
         if let Some(path) = steam::avatar::avatar_path(&steam_path, &current.steam_id64) {
-            if let Some((rgba, size)) = steam::avatar::round_icon_rgba(&path, ICON_SIZE) {
+            if let Some((rgba, size)) = steam::avatar::round_icon_rgba(&path, TRAY_ICON_SIZE) {
                 let _ = tray.set_icon(Some(Image::new_owned(rgba, size, size)));
             }
         }
     }
 }
 
-/// Best display name available without user settings (refined in settings later).
-fn display_name(account: &Account) -> String {
-    if account.persona_name.trim().is_empty() {
-        account.account_name.clone()
-    } else {
-        account.persona_name.clone()
+/// Create the tray icon and menu on startup.
+pub fn setup(app: &AppHandle) -> tauri::Result<()> {
+    let menu = build_menu(app)?;
+    TrayIconBuilder::with_id(TRAY_ID)
+        .icon(app.default_window_icon().unwrap().clone())
+        .tooltip("Steam Quick Switch")
+        .menu(&menu)
+        .show_menu_on_left_click(true)
+        .on_menu_event(|app, event| handle_menu_event(app, event.id().as_ref()))
+        .build(app)?;
+    refresh_icon(app);
+    Ok(())
+}
+
+fn handle_menu_event(app: &AppHandle, id: &str) {
+    if let Some(steam_id64) = id.strip_prefix("switch:") {
+        switch_to(app, steam_id64.to_string());
+    } else if let Some(steam_id64) = id.strip_prefix("rename:") {
+        crate::open_nickname_popup(app, steam_id64);
+    } else if id == "lang:en" {
+        settings::set_language(app, "en");
+        refresh(app);
+    } else if id == "lang:de" {
+        settings::set_language(app, "de");
+        refresh(app);
+    } else if id == "autostart" {
+        let manager = app.autolaunch();
+        let result = if manager.is_enabled().unwrap_or(false) {
+            manager.disable()
+        } else {
+            manager.enable()
+        };
+        let _ = result;
+        refresh(app);
+    } else if id == "quit" {
+        app.exit(0);
     }
+}
+
+/// Perform an account switch off the main thread, then refresh the tray.
+fn switch_to(app: &AppHandle, steam_id64: String) {
+    let accounts = steam::list_accounts().unwrap_or_default();
+    let Some(account) = accounts.into_iter().find(|a| a.steam_id64 == steam_id64) else {
+        return;
+    };
+    let app = app.clone();
+    std::thread::spawn(move || {
+        if let Some(steam_path) = steam::registry::steam_path() {
+            let _ = steam::switch::switch_account(
+                &steam_path,
+                &account.account_name,
+                &account.steam_id64,
+            );
+        }
+        let handle = app.clone();
+        let _ = app.run_on_main_thread(move || refresh(&handle));
+    });
 }

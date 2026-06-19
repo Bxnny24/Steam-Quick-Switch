@@ -5,11 +5,7 @@
   --border: #e3e5e9;
   --text: #1b1d22;
   --text-muted: #6b7280;
-  --current: #2faa55;
-  --danger-bg: #fdecea;
-  --danger-text: #b3261e;
-  --radius: 12px;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --accent: #2faa55;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -20,10 +16,7 @@
     --border: #2d323c;
     --text: #eef0f4;
     --text-muted: #9aa3b2;
-    --current: #5fd06f;
-    --danger-bg: #3a1f1d;
-    --danger-text: #ff8c82;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 10px rgba(0, 0, 0, 0.25);
+    --accent: #5fd06f;
   }
 }
 
@@ -46,274 +39,64 @@ body {
   user-select: none;
 }
 
-.app {
-  display: flex;
-  flex-direction: column;
+.popup {
   height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   padding: 14px;
-  gap: 12px;
 }
 
-.app__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.app__title {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-}
-
-.icon-button {
-  border: 1px solid var(--border);
-  background: var(--surface);
+.popup__label {
+  font-size: 13px;
   color: var(--text-muted);
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  font-size: 15px;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.icon-button:hover:not(:disabled) {
-  background: var(--surface-hover);
+.popup__label strong {
   color: var(--text);
 }
-.icon-button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
 
-.accounts {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  overflow-y: auto;
-  flex: 1;
-}
-
-.account {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 10px;
+.popup__input {
   border: 1px solid var(--border);
-  border-radius: var(--radius);
   background: var(--surface);
-  box-shadow: var(--shadow);
-  cursor: pointer;
-  text-align: left;
-  color: inherit;
-  font: inherit;
-  transition: background 0.15s, border-color 0.15s, transform 0.05s;
-}
-.account:hover:not(:disabled):not(.account--current) {
-  background: var(--surface-hover);
-}
-.account:active:not(:disabled) {
-  transform: scale(0.99);
-}
-.account:disabled {
-  cursor: default;
-}
-.account--current {
-  border-color: var(--current);
-  cursor: default;
-}
-
-.account__avatar {
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: var(--surface-hover);
-  display: grid;
-  place-items: center;
-}
-.account__avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-.account__avatar-fallback {
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.account__info {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
-}
-.account__name {
-  font-weight: 600;
-  font-size: 14px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.account__login {
-  font-size: 12px;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.account__status {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--current);
-  white-space: nowrap;
-}
-
-.banner {
+  color: var(--text);
+  border-radius: 8px;
   padding: 8px 10px;
-  border-radius: 8px;
-  font-size: 12px;
-  line-height: 1.4;
-  word-break: break-word;
+  font: inherit;
+  font-size: 14px;
 }
-.banner--error {
-  background: var(--danger-bg);
-  color: var(--danger-text);
+.popup__input:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
-.state {
-  flex: 1;
-  display: grid;
-  place-items: center;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.app__footer {
-  font-size: 11px;
-  color: var(--text-muted);
-  text-align: center;
-}
-
-.app__actions {
+.popup__actions {
+  margin-top: auto;
   display: flex;
-  gap: 6px;
+  justify-content: flex-end;
+  gap: 8px;
 }
-.icon-button--ghost {
-  visibility: hidden;
-}
-
-.settings {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  overflow-y: auto;
-  flex: 1;
-}
-.settings__group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.settings__heading {
-  margin: 0 0 2px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-muted);
-}
-.settings__row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 13px;
-}
-.settings__account {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.settings select,
-.settings input[type="text"] {
+.popup__btn {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
   border-radius: 8px;
-  padding: 5px 8px;
+  padding: 6px 14px;
   font: inherit;
   font-size: 13px;
-}
-.settings input[type="text"] {
-  width: 132px;
-}
-.settings input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
   cursor: pointer;
 }
-
-.update-banner {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-  padding: 6px 10px;
-  font-size: 12px;
-  text-align: center;
-  color: #fff;
-  background: var(--current);
-}
-
-.popover-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-}
-.popover {
-  position: fixed;
-  z-index: 201;
-  display: flex;
-  gap: 6px;
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-.popover__input {
-  width: 130px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
-  border-radius: 6px;
-  padding: 5px 8px;
-  font: inherit;
-  font-size: 13px;
-}
-.popover__btn {
-  border: 1px solid var(--border);
+.popup__btn:hover {
   background: var(--surface-hover);
-  color: var(--text);
-  border-radius: 6px;
-  padding: 5px 10px;
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
 }
-.popover__btn:hover {
-  background: var(--border);
+.popup__btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.popup__btn--primary:hover {
+  background: var(--accent);
+  filter: brightness(1.05);
 }
