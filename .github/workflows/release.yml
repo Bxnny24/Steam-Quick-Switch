@@ -43,3 +43,13 @@ jobs:
           releaseBody: "Download the installer below. The app updates itself automatically afterwards."
           releaseDraft: false
           prerelease: false
+
+      - name: Publish installer under a stable name
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $exe = Get-ChildItem src-tauri/target/release/bundle/nsis -Filter *-setup.exe | Select-Object -First 1
+          if (-not $exe) { throw "NSIS installer not found" }
+          Copy-Item $exe.FullName SteamQuickSwitch-Setup.exe
+          gh release upload ${{ github.ref_name }} SteamQuickSwitch-Setup.exe --clobber
