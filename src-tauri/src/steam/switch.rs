@@ -6,6 +6,7 @@
 //!   3. Mark the target as most-recent in `loginusers.vdf` (best effort).
 //!   4. Relaunch Steam, which auto-logs into the target account.
 
+use std::os::windows::process::CommandExt;
 use std::path::Path;
 use std::process::Command;
 use std::thread;
@@ -15,6 +16,15 @@ use crate::steam::{registry, vdf};
 
 const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(15);
 const POLL_INTERVAL: Duration = Duration::from_millis(300);
+/// `CREATE_NO_WINDOW`: stops console helpers (tasklist/taskkill) from flashing.
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+/// Build a `Command` that never pops up a console window.
+fn silent_command<S: AsRef<std::ffi::OsStr>>(program: S) -> Command {
+    let mut cmd = Command::new(program);
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    cmd
+}
 
 /// Switch the active Steam account and restart Steam so it auto-logs in.
 pub fn switch_account(
@@ -28,7 +38,7 @@ pub fn switch_account(
     }
 
     if is_steam_running() {
-        Command::new(&steam_exe)
+        silent_command(&steam_exe)
             .arg("-shutdown")
             .spawn()
             .map_err(|e| format!("failed to ask Steam to shut down: {e}"))?;
@@ -41,7 +51,7 @@ pub fn switch_account(
         eprintln!("warning: could not update loginusers.vdf: {e}");
     }
 
-    Command::new(&steam_exe)
+    silent_command(&steam_exe)
         .spawn()
         .map_err(|e| format!("failed to relaunch Steam: {e}"))?;
 
@@ -50,7 +60,7 @@ pub fn switch_account(
 
 /// Whether a `steam.exe` process is currently running.
 fn is_steam_running() -> bool {
-    Command::new("tasklist")
+    silent_command("tasklist")
         .args(["/FI", "IMAGENAME eq steam.exe", "/NH", "/FO", "CSV"])
         .output()
         .map(|o| {
@@ -71,7 +81,7 @@ fn wait_for_steam_exit() -> Result<(), String> {
         thread::sleep(POLL_INTERVAL);
     }
 
-    let _ = Command::new("taskkill")
+    let _ = silent_command("taskkill")
         .args(["/F", "/IM", "steam.exe"])
         .output();
     thread::sleep(Duration::from_millis(500));
