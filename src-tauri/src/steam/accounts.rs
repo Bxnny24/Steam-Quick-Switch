@@ -20,8 +20,8 @@ pub struct Account {
     pub avatar: Option<String>,
 }
 
-/// List all Steam accounts known to this machine, newest first, marking the
-/// account that is currently set to auto-login.
+/// List all Steam accounts known to this machine — the active account first,
+/// then most-recently-used — marking the one set to auto-login.
 pub fn list_accounts() -> Result<Vec<Account>, String> {
     let steam_path =
         registry::steam_path().ok_or_else(|| "Steam installation not found".to_string())?;
@@ -33,7 +33,7 @@ pub fn list_accounts() -> Result<Vec<Account>, String> {
     let mut users = vdf::parse_login_users(&steam_path)?;
     users.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
 
-    let accounts = users
+    let mut accounts: Vec<Account> = users
         .into_iter()
         .map(|u| {
             let is_current = !current.is_empty() && u.account_name.to_lowercase() == current;
@@ -50,6 +50,9 @@ pub fn list_accounts() -> Result<Vec<Account>, String> {
             }
         })
         .collect();
+
+    // Pin the active account to the very top; the rest stay most-recently-used first.
+    accounts.sort_by_key(|a| !a.is_current);
 
     Ok(accounts)
 }

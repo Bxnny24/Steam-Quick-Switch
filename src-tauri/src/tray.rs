@@ -141,10 +141,7 @@ fn refresh_icon(app: &AppHandle) {
     else {
         return;
     };
-    let _ = tray.set_tooltip(Some(format!(
-        "Steam Quick Switch — {}",
-        display_name(app, current)
-    )));
+    let _ = tray.set_tooltip(Some(display_name(app, current)));
     if let Some(steam_path) = steam::registry::steam_path() {
         if let Some(path) = steam::avatar::avatar_path(&steam_path, &current.steam_id64) {
             if let Some((rgba, size)) = steam::avatar::round_icon_rgba(&path, TRAY_ICON_SIZE) {

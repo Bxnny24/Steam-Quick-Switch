@@ -84,13 +84,14 @@ pub fn set_most_recent(steam_path: &Path, target_steam_id64: &str) -> Result<(),
 
     if let Some(users) = vdf.value.get_mut_obj() {
         for (steam_id, values) in users.iter_mut() {
-            let flag = if steam_id.as_ref() == target_steam_id64 {
-                "1"
-            } else {
-                "0"
-            };
+            let is_target = steam_id.as_ref() == target_steam_id64;
             if let Some(Value::Obj(user)) = values.first_mut() {
-                set_str(user, "MostRecent", flag);
+                set_str(user, "MostRecent", if is_target { "1" } else { "0" });
+                if is_target {
+                    // Maximise the chance Steam auto-logs in without a prompt.
+                    set_str(user, "RememberPassword", "1");
+                    set_str(user, "AllowAutoLogin", "1");
+                }
             }
         }
     }
