@@ -15,6 +15,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set version from tag
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart('v')
+          (Get-Content src-tauri/tauri.conf.json -Raw) -replace '"version": "[^"]*"', ('"version": "' + $v + '"') | Set-Content src-tauri/tauri.conf.json -Encoding utf8
+          (Get-Content package.json -Raw) -replace '"version": "[^"]*"', ('"version": "' + $v + '"') | Set-Content package.json -Encoding utf8
+          (Get-Content src-tauri/Cargo.toml -Raw) -replace '(?m)^version = "[^"]*"', ('version = "' + $v + '"') | Set-Content src-tauri/Cargo.toml -Encoding utf8
+          Write-Host "Building version $v"
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:

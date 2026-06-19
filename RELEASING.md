@@ -21,22 +21,21 @@ Add a repository secret under **Settings → Secrets and variables → Actions**
 
 ## Cutting a release
 
-1. Bump the version in all three files so they match:
-   - `src-tauri/tauri.conf.json` → `version`
-   - `package.json` → `version`
-   - `src-tauri/Cargo.toml` → `[package] version`
-2. Commit the bump:
-   ```
-   git commit -am "chore: release vX.Y.Z"
-   ```
-3. Tag and push:
-   ```
-   git tag vX.Y.Z
-   git push origin main --tags
-   ```
-4. The **Release** workflow builds the Windows installer (NSIS + MSI), signs the
-   update artifacts, and publishes a GitHub Release containing the installers and
-   `latest.json`.
+Just push a version tag — the workflow derives the app version from the tag, so
+you do **not** need to edit any version files:
+
+```
+git tag v0.1.2
+git push origin v0.1.2
+```
+
+The **Release** workflow writes the version (from the tag) into
+`tauri.conf.json`, `package.json` and `Cargo.toml`, builds the Windows installer
+(NSIS + MSI), signs the update artifacts, and publishes a GitHub Release with the
+installers and `latest.json`.
+
+> The tag (e.g. `v0.1.2`) must be a **higher** version than what users have
+> installed, otherwise the updater sees no newer version and does nothing.
 
 Installed apps fetch `latest.json` on startup and update themselves when a newer
 version is available.
