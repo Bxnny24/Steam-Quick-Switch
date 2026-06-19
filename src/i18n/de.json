@@ -11,16 +11,16 @@
     "accountCount_one": "{{count}} Konto",
     "accountCount_other": "{{count}} Konten"
   },
+  "account": {
+    "nicknamePlaceholder": "Spitzname",
+    "save": "Speichern",
+    "hint": "Rechtsklick für Spitzname"
+  },
   "settings": {
     "title": "Einstellungen",
     "back": "Zurück",
     "language": "Sprache",
-    "autostart": "Mit Windows starten",
-    "displayName": "Angezeigter Name",
-    "nameProfile": "Profilname",
-    "nameAccount": "Kontoname",
-    "nicknames": "Spitznamen",
-    "nicknamePlaceholder": "Spitzname"
+    "autostart": "Mit Windows starten"
   },
   "update": {
     "downloading": "Update {{version}} wird geladen…",

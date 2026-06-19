@@ -10,8 +10,8 @@ currently active.
 - One-click switching between all remembered Steam accounts
 - Avatars and names read from Steam's local cache (no API key, works offline)
 - English and German (auto-detected, switchable)
-- Settings: language, start with Windows, and display-name mode
-  (profile name / account name / custom nickname)
+- Custom nicknames per account (right-click an account to rename it)
+- Settings: language and start with Windows
 - Automatic, cryptographically signed updates
 - Clean, modern light/dark UI
 

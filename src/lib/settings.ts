@@ -3,12 +3,10 @@ import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import type { Account } from "./api";
 
 export type Language = "en" | "de";
-export type NameMode = "persona" | "account";
 
 export interface Settings {
   language: Language;
   autostart: boolean;
-  nameMode: NameMode;
   nicknames: Record<string, string>;
 }
 
@@ -29,7 +27,6 @@ function getStore(): Promise<Store> {
 export async function loadSettings(): Promise<Settings> {
   const store = await getStore();
   const language = (await store.get<Language>("language")) ?? detectLanguage();
-  const nameMode = (await store.get<NameMode>("nameMode")) ?? "persona";
   const nicknames =
     (await store.get<Record<string, string>>("nicknames")) ?? {};
   let autostart = false;
@@ -38,18 +35,12 @@ export async function loadSettings(): Promise<Settings> {
   } catch {
     autostart = false;
   }
-  return { language, autostart, nameMode, nicknames };
+  return { language, autostart, nicknames };
 }
 
 export async function setLanguage(language: Language): Promise<void> {
   const store = await getStore();
   await store.set("language", language);
-  await store.save();
-}
-
-export async function setNameMode(nameMode: NameMode): Promise<void> {
-  const store = await getStore();
-  await store.set("nameMode", nameMode);
   await store.save();
 }
 
@@ -79,10 +70,10 @@ export async function setAutostart(enabled: boolean): Promise<void> {
   }
 }
 
-/** Resolve the name shown for an account: nickname > nameMode preference. */
+/** Resolve the name shown for an account: a custom nickname, else the Steam
+ * profile name (falling back to the account name). */
 export function resolveDisplayName(account: Account, settings: Settings): string {
   const nickname = settings.nicknames[account.steamId64]?.trim();
   if (nickname) return nickname;
-  if (settings.nameMode === "account") return account.accountName;
   return account.personaName.trim() || account.accountName;
 }

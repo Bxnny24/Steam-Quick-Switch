@@ -11,16 +11,16 @@
     "accountCount_one": "{{count}} account",
     "accountCount_other": "{{count}} accounts"
   },
+  "account": {
+    "nicknamePlaceholder": "Nickname",
+    "save": "Save",
+    "hint": "Right-click to set a nickname"
+  },
   "settings": {
     "title": "Settings",
     "back": "Back",
     "language": "Language",
-    "autostart": "Start with Windows",
-    "displayName": "Display name",
-    "nameProfile": "Profile name",
-    "nameAccount": "Account name",
-    "nicknames": "Nicknames",
-    "nicknamePlaceholder": "Nickname"
+    "autostart": "Start with Windows"
   },
   "update": {
     "downloading": "Downloading update {{version}}…",

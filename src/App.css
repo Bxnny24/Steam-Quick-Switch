@@ -114,7 +114,7 @@ body {
   font: inherit;
   transition: background 0.15s, border-color 0.15s, transform 0.05s;
 }
-.account:hover:not(:disabled) {
+.account:hover:not(:disabled):not(.account--current) {
   background: var(--surface-hover);
 }
 .account:active:not(:disabled) {
@@ -125,6 +125,7 @@ body {
 }
 .account--current {
   border-color: var(--current);
+  cursor: default;
 }
 
 .account__avatar {
@@ -275,4 +276,44 @@ body {
   text-align: center;
   color: #fff;
   background: var(--current);
+}
+
+.popover-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+}
+.popover {
+  position: fixed;
+  z-index: 201;
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.popover__input {
+  width: 130px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 13px;
+}
+.popover__btn {
+  border: 1px solid var(--border);
+  background: var(--surface-hover);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.popover__btn:hover {
+  background: var(--border);
 }

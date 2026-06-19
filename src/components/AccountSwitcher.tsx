@@ -1,9 +1,26 @@
-import { useCallback, useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type MouseEvent,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Account, listAccounts, switchAccount } from "../lib/api";
-import { Settings, loadSettings, resolveDisplayName } from "../lib/settings";
+import {
+  Settings,
+  loadSettings,
+  resolveDisplayName,
+  setNickname,
+} from "../lib/settings";
 import i18n from "../i18n";
 import { SettingsView } from "./Settings";
+
+interface NicknameEditor {
+  steamId64: string;
+  value: string;
+  x: number;
+  y: number;
+}
 
 export function AccountSwitcher() {
   const { t } = useTranslation();
@@ -13,6 +30,7 @@ export function AccountSwitcher() {
   const [error, setError] = useState<string | null>(null);
   const [switching, setSwitching] = useState<string | null>(null);
   const [view, setView] = useState<"switcher" | "settings">("switcher");
+  const [editor, setEditor] = useState<NicknameEditor | null>(null);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -56,6 +74,29 @@ export function AccountSwitcher() {
     }
   }
 
+  /** Right-click an account row to set/edit/clear its nickname. */
+  function openEditor(account: Account, e: MouseEvent) {
+    e.preventDefault();
+    setEditor({
+      steamId64: account.steamId64,
+      value: settings?.nicknames[account.steamId64] ?? "",
+      x: Math.min(e.clientX, window.innerWidth - 190),
+      y: Math.min(e.clientY, window.innerHeight - 60),
+    });
+  }
+
+  async function saveNickname() {
+    if (!editor) return;
+    const { steamId64, value } = editor;
+    setEditor(null);
+    try {
+      await setNickname(steamId64, value);
+      await reloadSettings();
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+
   function nameOf(account: Account): string {
     return settings
       ? resolveDisplayName(account, settings)
@@ -65,7 +106,6 @@ export function AccountSwitcher() {
   if (view === "settings" && settings) {
     return (
       <SettingsView
-        accounts={accounts}
         settings={settings}
         onChanged={reloadSettings}
         onClose={() => setView("switcher")}
@@ -112,11 +152,15 @@ export function AccountSwitcher() {
           {accounts.map((account) => {
             const isSwitching = switching === account.steamId64;
             return (
-              <li key={account.steamId64}>
+              <li
+                key={account.steamId64}
+                onContextMenu={(e) => openEditor(account, e)}
+              >
                 <button
                   className={`account${account.isCurrent ? " account--current" : ""}`}
                   onClick={() => handleSwitch(account)}
-                  disabled={!!switching || account.isCurrent}
+                  disabled={!!switching}
+                  title={t("account.hint")}
                 >
                   <span className="account__avatar">
                     {account.avatar ? (
@@ -148,6 +192,39 @@ export function AccountSwitcher() {
       <footer className="app__footer">
         {t("app.accountCount", { count: accounts.length })}
       </footer>
+
+      {editor && (
+        <div
+          className="popover-backdrop"
+          onClick={() => setEditor(null)}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            setEditor(null);
+          }}
+        >
+          <div
+            className="popover"
+            style={{ left: editor.x, top: editor.y }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <input
+              className="popover__input"
+              autoFocus
+              type="text"
+              placeholder={t("account.nicknamePlaceholder")}
+              value={editor.value}
+              onChange={(e) => setEditor({ ...editor, value: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveNickname();
+                if (e.key === "Escape") setEditor(null);
+              }}
+            />
+            <button className="popover__btn" onClick={saveNickname}>
+              {t("account.save")}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
