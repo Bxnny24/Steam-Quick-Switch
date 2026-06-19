@@ -29,28 +29,23 @@ pub fn set_language(app: &AppHandle, lang: &str) {
     }
 }
 
-/// The custom nickname for an account, if any.
-pub fn nickname(app: &AppHandle, steam_id64: &str) -> Option<String> {
-    let store = app.store(STORE).ok()?;
-    let value = store.get("nicknames")?;
-    let obj = value.as_object()?;
-    obj.get(steam_id64)?.as_str().map(|s| s.to_string())
+/// How account names are shown: "persona" (Steam profile name) or "account".
+pub fn name_mode(app: &AppHandle) -> String {
+    if let Ok(store) = app.store(STORE) {
+        if let Some(value) = store.get("nameMode") {
+            if let Some(s) = value.as_str() {
+                if s == "account" || s == "persona" {
+                    return s.to_string();
+                }
+            }
+        }
+    }
+    "persona".to_string()
 }
 
-/// Set or clear (empty string) the nickname for an account.
-pub fn set_nickname(app: &AppHandle, steam_id64: &str, nickname: &str) {
+pub fn set_name_mode(app: &AppHandle, mode: &str) {
     if let Ok(store) = app.store(STORE) {
-        let mut map = store
-            .get("nicknames")
-            .and_then(|v| v.as_object().cloned())
-            .unwrap_or_default();
-        let trimmed = nickname.trim();
-        if trimmed.is_empty() {
-            map.remove(steam_id64);
-        } else {
-            map.insert(steam_id64.to_string(), json!(trimmed));
-        }
-        store.set("nicknames", serde_json::Value::Object(map));
+        store.set("nameMode", json!(mode));
         let _ = store.save();
     }
 }

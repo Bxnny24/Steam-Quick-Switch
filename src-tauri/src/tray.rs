@@ -16,12 +16,10 @@ pub const TRAY_ID: &str = "main-tray";
 const TRAY_ICON_SIZE: u32 = 32;
 const MENU_ICON_SIZE: u32 = 18;
 
-/// Display name: nickname > Steam profile name > account name.
+/// Display name: Steam profile name or account name, per the user's setting.
 fn display_name(app: &AppHandle, account: &Account) -> String {
-    if let Some(nick) = settings::nickname(app, &account.steam_id64) {
-        if !nick.trim().is_empty() {
-            return nick;
-        }
+    if settings::name_mode(app) == "account" {
+        return account.account_name.clone();
     }
     if account.persona_name.trim().is_empty() {
         account.account_name.clone()
@@ -39,6 +37,7 @@ fn menu_icon(steam_path: &std::path::Path, steam_id64: &str) -> Option<Image<'st
 /// Build the full tray menu from the current accounts and settings.
 fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     let lang = settings::language(app);
+    let mode = settings::name_mode(app);
     let l = i18n::labels(&lang);
     let steam_path = steam::registry::steam_path();
     let accounts = steam::list_accounts().unwrap_or_default();
@@ -71,19 +70,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
 
     menu.append(&PredefinedMenuItem::separator(app)?)?;
 
-    if !accounts.is_empty() {
-        let mut rename = SubmenuBuilder::new(app, l.rename);
-        for account in &accounts {
-            rename = rename.text(
-                format!("rename:{}", account.steam_id64),
-                display_name(app, account),
-            );
-        }
-        let rename = rename.build()?;
-        menu.append(&rename)?;
-    }
-
-    // Settings submenu: language + autostart.
+    // Settings submenu: language, display name, autostart.
     let lang_en =
         CheckMenuItem::with_id(app, "lang:en", "English", true, lang == "en", None::<&str>)?;
     let lang_de =
@@ -92,11 +79,35 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         .item(&lang_en)
         .item(&lang_de)
         .build()?;
+
+    let name_persona = CheckMenuItem::with_id(
+        app,
+        "name:persona",
+        l.name_persona,
+        true,
+        mode == "persona",
+        None::<&str>,
+    )?;
+    let name_account = CheckMenuItem::with_id(
+        app,
+        "name:account",
+        l.name_account,
+        true,
+        mode == "account",
+        None::<&str>,
+    )?;
+    let name_menu = SubmenuBuilder::new(app, l.display_name)
+        .item(&name_persona)
+        .item(&name_account)
+        .build()?;
+
     let autostart_on = app.autolaunch().is_enabled().unwrap_or(false);
     let autostart =
         CheckMenuItem::with_id(app, "autostart", l.autostart, true, autostart_on, None::<&str>)?;
+
     let settings_menu = SubmenuBuilder::new(app, l.settings)
         .item(&lang_menu)
+        .item(&name_menu)
         .item(&autostart)
         .build()?;
     menu.append(&settings_menu)?;
@@ -160,13 +171,17 @@ pub fn setup(app: &AppHandle) -> tauri::Result<()> {
 fn handle_menu_event(app: &AppHandle, id: &str) {
     if let Some(steam_id64) = id.strip_prefix("switch:") {
         switch_to(app, steam_id64.to_string());
-    } else if let Some(steam_id64) = id.strip_prefix("rename:") {
-        crate::open_nickname_popup(app, steam_id64);
     } else if id == "lang:en" {
         settings::set_language(app, "en");
         refresh(app);
     } else if id == "lang:de" {
         settings::set_language(app, "de");
+        refresh(app);
+    } else if id == "name:persona" {
+        settings::set_name_mode(app, "persona");
+        refresh(app);
+    } else if id == "name:account" {
+        settings::set_name_mode(app, "account");
         refresh(app);
     } else if id == "autostart" {
         let manager = app.autolaunch();

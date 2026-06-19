@@ -1,8 +1,6 @@
-import { NicknamePopup } from "./components/NicknamePopup";
-import "./App.css";
-
+// The app lives entirely in the system tray; no window is shown.
 function App() {
-  return <NicknamePopup />;
+  return null;
 }
 
 export default App;

@@ -11,8 +11,8 @@ click opens a menu of all your profiles.
 - Each profile shows its Steam avatar; one click switches to it
 - The tray icon itself is the active account's avatar
 - Avatars and names read from Steam's local cache (no API key, works offline)
-- Settings right in the tray menu: language (English/German) and start with Windows
-- Custom nickname per account, set from the tray menu (a small input popup)
+- Settings right in the tray menu: language (English/German), display name (Steam
+  profile name or account name), and start with Windows
 - Automatic, cryptographically signed updates
 
 ## How it works
