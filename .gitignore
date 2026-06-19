@@ -40,6 +40,5 @@ src-tauri/gen/
 Thumbs.db
 Desktop.ini
 
-# Claude (keep project instructions, ignore local settings/skills/plans)
-.claude/*
-!.claude/CLAUDE.md
+# Claude (local AI assistant config — never tracked)
+.claude/
