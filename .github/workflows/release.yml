@@ -62,3 +62,25 @@ jobs:
           if (-not $exe) { throw "NSIS installer not found" }
           Copy-Item $exe.FullName SteamQuickSwitch-Setup.exe
           gh release upload ${{ github.ref_name }} SteamQuickSwitch-Setup.exe --clobber
+
+  update-readme:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Update download button in README
+        run: node scripts/update-readme-version.mjs "${GITHUB_REF_NAME}" "${GITHUB_REPOSITORY}"
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git diff --staged --quiet || git commit -m "docs: update download button to ${GITHUB_REF_NAME}"
+          git push
