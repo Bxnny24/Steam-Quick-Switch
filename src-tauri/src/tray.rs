@@ -203,11 +203,7 @@ fn switch_to(app: &AppHandle, steam_id64: String) {
     let app = app.clone();
     std::thread::spawn(move || {
         if let Some(steam_path) = steam::registry::steam_path() {
-            let _ = steam::switch::switch_account(
-                &steam_path,
-                &account.account_name,
-                &account.steam_id64,
-            );
+            let _ = steam::switch::switch_account(&steam_path, &account.account_name);
         }
         let handle = app.clone();
         let _ = app.run_on_main_thread(move || refresh(&handle));
