@@ -2,9 +2,10 @@
 //!
 //! The mechanism (no admin rights required):
 //!   1. Hard-kill any running game, then ask Steam to shut down and wait.
-//!   2. Point `AutoLoginUser`/`RememberPassword` at the target account.
-//!   3. Mark the target as most-recent in `loginusers.vdf` (best effort).
-//!   4. Relaunch Steam, which auto-logs into the target account.
+//!   2. Point `AutoLoginUser` at the target account (so the tray reflects it).
+//!   3. Relaunch via `steam.exe -login <account>`, which uses Steam's own
+//!      cached login token — the same path as Steam's built-in account
+//!      switcher, so remembered accounts log in without a prompt.
 //!
 //! Running games are terminated directly, without waiting for them to save:
 //! switching accounts has to close them anyway, and the user is expected to
@@ -19,7 +20,7 @@ use std::time::{Duration, Instant};
 use keyvalues_parser::Value;
 use sysinfo::System;
 
-use crate::steam::{registry, vdf};
+use crate::steam::registry;
 
 const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(15);
 const POLL_INTERVAL: Duration = Duration::from_millis(300);
@@ -33,12 +34,10 @@ fn silent_command<S: AsRef<std::ffi::OsStr>>(program: S) -> Command {
     cmd
 }
 
-/// Switch the active Steam account and restart Steam so it auto-logs in.
-pub fn switch_account(
-    steam_path: &Path,
-    account_name: &str,
-    steam_id64: &str,
-) -> Result<(), String> {
+/// Switch the active Steam account: hard-close any running game, shut Steam
+/// down, then relaunch it logged in to `account_name` via Steam's own `-login`
+/// path (uses the cached token).
+pub fn switch_account(steam_path: &Path, account_name: &str) -> Result<(), String> {
     let steam_exe = steam_path.join("steam.exe");
     if !steam_exe.exists() {
         return Err(format!("steam.exe not found at {}", steam_exe.display()));
@@ -57,13 +56,14 @@ pub fn switch_account(
         wait_for_steam_exit()?;
     }
 
+    // Keep AutoLoginUser in sync so the tray reflects the new account at once.
     registry::set_auto_login_user(account_name)?;
 
-    if let Err(e) = vdf::set_most_recent(steam_path, steam_id64) {
-        eprintln!("warning: could not update loginusers.vdf: {e}");
-    }
-
+    // Relaunch through Steam's own login path; remembered accounts log in
+    // without a prompt, exactly like Steam's built-in account switcher.
     silent_command(&steam_exe)
+        .arg("-login")
+        .arg(account_name)
         .spawn()
         .map_err(|e| format!("failed to relaunch Steam: {e}"))?;
 

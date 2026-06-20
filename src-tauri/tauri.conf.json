@@ -25,6 +25,7 @@
   },
   "bundle": {
     "active": true,
+    "publisher": "Steam Quick Switch",
     "createUpdaterArtifacts": true,
     "targets": "all",
     "icon": [
