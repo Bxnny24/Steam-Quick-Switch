@@ -1,6 +1,8 @@
 //! System tray — the entire UI. A native menu lists all Steam accounts (with
 //! avatars) plus settings, and the tray icon shows the active account's avatar.
 
+use std::time::Duration;
+
 use tauri::{
     image::Image,
     menu::{CheckMenuItem, IconMenuItem, Menu, MenuItem, PredefinedMenuItem, SubmenuBuilder},
@@ -15,6 +17,8 @@ use crate::{i18n, settings};
 pub const TRAY_ID: &str = "main-tray";
 const TRAY_ICON_SIZE: u32 = 32;
 const MENU_ICON_SIZE: u32 = 18;
+/// How often to poll for account switches made outside this app.
+const WATCH_INTERVAL: Duration = Duration::from_secs(3);
 
 /// Display name: Steam profile name or account name, per the user's setting.
 fn display_name(app: &AppHandle, account: &Account) -> String {
@@ -162,7 +166,33 @@ pub fn setup(app: &AppHandle) -> tauri::Result<()> {
         .on_menu_event(|app, event| handle_menu_event(app, event.id().as_ref()))
         .build(app)?;
     refresh_icon(app);
+    start_account_watcher(app);
     Ok(())
+}
+
+/// The lowercased active-account key, used to detect external switches.
+fn current_account_key() -> String {
+    steam::registry::auto_login_user()
+        .unwrap_or_default()
+        .to_lowercase()
+}
+
+/// Watch for account switches made outside this app (Steam itself or other
+/// tools) and refresh the tray whenever the active account changes.
+fn start_account_watcher(app: &AppHandle) {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let mut last = current_account_key();
+        loop {
+            std::thread::sleep(WATCH_INTERVAL);
+            let now = current_account_key();
+            if now != last {
+                last = now;
+                let handle = app.clone();
+                let _ = app.run_on_main_thread(move || refresh(&handle));
+            }
+        }
+    });
 }
 
 fn handle_menu_event(app: &AppHandle, id: &str) {
