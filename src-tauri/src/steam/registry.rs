@@ -53,6 +53,22 @@ pub fn auto_login_user() -> Option<String> {
     }
 }
 
+/// The AppID of the game Steam currently reports as running (the foreground
+/// game), or `None` when no game is running.
+///
+/// Read from `HKCU\Software\Valve\Steam\RunningAppID` (a `REG_DWORD` that Steam
+/// keeps in sync with the active game and resets to `0` when nothing runs).
+pub fn running_app_id() -> Option<u32> {
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let steam = hkcu.open_subkey(STEAM_KEY).ok()?;
+    let id: u32 = steam.get_value("RunningAppID").ok()?;
+    if id == 0 {
+        None
+    } else {
+        Some(id)
+    }
+}
+
 /// Point Steam at `account_name` for the next launch and remember the password.
 /// Writes to `HKCU` only, so no admin rights are required.
 pub fn set_auto_login_user(account_name: &str) -> Result<(), String> {
