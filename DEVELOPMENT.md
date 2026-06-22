@@ -40,7 +40,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 ## Settings & data
 
-Stored in `%AppData%\Roaming\com.bxnny24.steamquickswitch\settings.json`
+Stored in `%AppData%\Roaming\steam-quick-switch\settings.json`
 (`language`, `nameMode`).
 
 ## Releasing
