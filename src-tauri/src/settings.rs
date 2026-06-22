@@ -2,12 +2,19 @@
 //! the app data directory. Read and written from Rust so the app needs no
 //! window.
 
+use std::fs;
+
 use serde_json::json;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_store::StoreExt;
 
 const STORE: &str = "settings.json";
+
+/// The previous reverse-domain bundle identifier. Data directories created
+/// under this name (before the rename to `steam-quick-switch`) are migrated
+/// and removed by [`migrate_legacy_data`].
+const LEGACY_IDENTIFIER: &str = "com.bxnny24.steamquickswitch";
 
 /// The UI language: "en" or "de". Falls back to the OS locale.
 pub fn language(app: &AppHandle) -> String {
@@ -59,6 +66,41 @@ pub fn ensure_autostart_default(app: &AppHandle) {
             let _ = app.autolaunch().enable();
             store.set("autostartConfigured", json!(true));
             let _ = store.save();
+        }
+    }
+}
+
+/// One-time migration from the old `com.bxnny24.steamquickswitch` data
+/// directories to the new `steam-quick-switch` ones. Copies the settings store
+/// across (so the user's language, name mode and autostart flag survive the
+/// rename) and removes the orphaned legacy folders in both Roaming and Local
+/// app data. Idempotent: once the legacy folders are gone it does nothing.
+///
+/// The install directory (`%LOCALAPPDATA%\Steam Quick Switch`) is derived from
+/// the product name, not the identifier, so it is never touched here.
+pub fn migrate_legacy_data(app: &AppHandle) {
+    // Roaming: carry the settings store over, then drop the legacy folder.
+    if let Ok(new_data) = app.path().app_data_dir() {
+        if let Some(legacy_data) = new_data.parent().map(|p| p.join(LEGACY_IDENTIFIER)) {
+            if legacy_data.is_dir() {
+                let legacy_store = legacy_data.join(STORE);
+                let new_store = new_data.join(STORE);
+                if legacy_store.is_file() && !new_store.exists() {
+                    if fs::create_dir_all(&new_data).is_ok() {
+                        let _ = fs::copy(&legacy_store, &new_store);
+                    }
+                }
+                let _ = fs::remove_dir_all(&legacy_data);
+            }
+        }
+    }
+    // Local: only WebView2 cache lived here; it is recreated on demand, so just
+    // remove the legacy folder.
+    if let Ok(new_local) = app.path().app_local_data_dir() {
+        if let Some(legacy_local) = new_local.parent().map(|p| p.join(LEGACY_IDENTIFIER)) {
+            if legacy_local.is_dir() {
+                let _ = fs::remove_dir_all(&legacy_local);
+            }
         }
     }
 }

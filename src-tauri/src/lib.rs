@@ -16,6 +16,9 @@ pub fn run() {
         ))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
+            // Migrate data from the old bundle identifier before anything reads
+            // the store, so the autostart flag carries over and is not re-applied.
+            settings::migrate_legacy_data(app.handle());
             settings::ensure_autostart_default(app.handle());
             tray::setup(app.handle())?;
             // Background auto-update check.
