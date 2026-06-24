@@ -5,10 +5,10 @@
 *Switch between your signed-in Steam accounts straight from the system tray — one click, no retyping passwords.*
 
 <!-- BEGIN LATEST DOWNLOAD BUTTON -->
-[![Download](https://img.shields.io/badge/Download-Steam_Quick_Switch_0.1.6-0d6efd?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Bxnny24/Steam-Quick-Switch/releases/latest/download/SteamQuickSwitch-Setup.exe)
+[![Download](https://img.shields.io/badge/Download-Steam_Quick_Switch_0.1.7-0d6efd?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Bxnny24/Steam-Quick-Switch/releases/latest/download/SteamQuickSwitch-Setup.exe)
 
 ![Platform](https://img.shields.io/badge/platform-Windows_10%2F11-lightgrey?style=flat-square&logo=windows)
-![Version](https://img.shields.io/badge/version-0.1.6-0d6efd?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.1.7-0d6efd?style=flat-square)
 <!-- END LATEST DOWNLOAD BUTTON -->
 
 </div>
