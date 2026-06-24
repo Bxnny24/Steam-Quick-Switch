@@ -19,6 +19,29 @@ Add a repository secret under **Settings → Secrets and variables → Actions**
 > Keep `sqs-updater.key` secret and backed up. If it is lost, already-installed
 > apps can no longer verify and receive signed updates.
 
+## Signing key security (important)
+
+The updater public key is **baked into every released binary and cannot be
+revoked**. This makes the private signing key the single trust anchor for all
+auto-updates — treat it like a production credential:
+
+- **A leak is unrecoverable for existing installs.** Anyone with the private key
+  can sign updates that already-installed clients will accept. The only remedy is
+  shipping a new build with a *new* keypair, which existing users must install
+  manually. There is no online revocation.
+- **No password is currently set** (`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` is
+  empty). Consider regenerating the keypair *with* a password and storing that
+  password as the secret, so the key file alone is not immediately usable if it
+  leaks. (A new keypair changes the public key, so it only applies to fresh
+  installs.)
+- **Keep it out of the repo.** `*.key`/`*.pem` are git-ignored; never commit the
+  key. Store it only in GitHub Actions secrets plus an offline backup, and
+  minimise who can read the Actions secrets.
+- **Restrict who can release.** Only trusted maintainers should be able to push
+  `v*` tags. Consider putting the release job behind a GitHub Environment with
+  required reviewers so a release cannot be cut (and the key cannot be used)
+  without approval.
+
 ## Cutting a release
 
 Just push a version tag — the workflow derives the app version from the tag, so
