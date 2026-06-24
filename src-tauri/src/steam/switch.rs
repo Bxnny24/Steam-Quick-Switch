@@ -114,17 +114,39 @@ fn running_game_dir(steam_path: &Path) -> Option<PathBuf> {
 }
 
 /// Read the `installdir` value out of a parsed `appmanifest` `AppState` object.
+///
+/// The value is only returned if it is a safe, plain relative folder name. An
+/// empty, absolute, or traversal (`..`) `installdir` is rejected: it is joined
+/// onto the trusted library path to form the directory whose processes
+/// [`kill_running_game`] terminates, so a crafted value must never be able to
+/// escape `steamapps\common` and broaden the kill set.
 fn installdir_from_manifest(appstate: &Value) -> Option<String> {
     if let Value::Obj(obj) = appstate {
         for (key, vals) in obj.iter() {
             if key.eq_ignore_ascii_case("installdir") {
                 if let Some(Value::Str(s)) = vals.first() {
-                    return Some(s.to_string());
+                    let s = s.as_ref();
+                    if is_safe_relative_dir(s) {
+                        return Some(s.to_string());
+                    }
                 }
             }
         }
     }
     None
+}
+
+/// Whether `name` is a non-empty relative path made only of normal components
+/// (no `..`, no `.`, no root/drive prefix). Joining such a value onto a base
+/// directory always stays inside that base, so it is safe against traversal.
+fn is_safe_relative_dir(name: &str) -> bool {
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+    Path::new(trimmed)
+        .components()
+        .all(|c| matches!(c, std::path::Component::Normal(_)))
 }
 
 /// Every Steam library root (the directory that contains `steamapps`), starting
@@ -226,5 +248,45 @@ mod tests {
 "#;
         let parsed = keyvalues_parser::parse(acf).expect("valid ACF");
         assert_eq!(installdir_from_manifest(&parsed.value), None);
+    }
+
+    #[test]
+    fn traversal_installdir_is_rejected() {
+        // A crafted manifest must not be able to point the kill target outside
+        // the Steam library via path traversal.
+        let acf = r#"
+"AppState"
+{
+    "appid"      "12345"
+    "installdir" "..\\..\\..\\Windows\\System32"
+}
+"#;
+        let parsed = keyvalues_parser::parse(acf).expect("valid ACF");
+        assert_eq!(installdir_from_manifest(&parsed.value), None);
+    }
+
+    #[test]
+    fn empty_installdir_is_rejected() {
+        let acf = r#"
+"AppState"
+{
+    "appid"      "12345"
+    "installdir" ""
+}
+"#;
+        let parsed = keyvalues_parser::parse(acf).expect("valid ACF");
+        assert_eq!(installdir_from_manifest(&parsed.value), None);
+    }
+
+    #[test]
+    fn safe_relative_dir_accepts_plain_names_only() {
+        assert!(is_safe_relative_dir("wallpaper_engine"));
+        assert!(is_safe_relative_dir("Counter-Strike Global Offensive"));
+        assert!(!is_safe_relative_dir(""));
+        assert!(!is_safe_relative_dir("   "));
+        assert!(!is_safe_relative_dir(".."));
+        assert!(!is_safe_relative_dir("..\\evil"));
+        assert!(!is_safe_relative_dir("C:\\Windows"));
+        assert!(!is_safe_relative_dir("\\\\server\\share"));
     }
 }
