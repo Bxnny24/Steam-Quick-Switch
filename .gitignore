@@ -42,3 +42,6 @@ Desktop.ini
 
 # Claude (local AI assistant config — never tracked)
 .claude/
+
+# Local docs (not tracked)
+/docs/
