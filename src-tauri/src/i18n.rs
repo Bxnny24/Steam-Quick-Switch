@@ -10,6 +10,7 @@ pub struct Labels {
     pub quit: &'static str,
     pub active: &'static str,
     pub no_accounts: &'static str,
+    pub switch_failed: &'static str,
 }
 
 pub fn labels(lang: &str) -> Labels {
@@ -24,6 +25,7 @@ pub fn labels(lang: &str) -> Labels {
             quit: "Beenden",
             active: "aktiv",
             no_accounts: "Keine Konten gefunden",
+            switch_failed: "Konto konnte nicht gewechselt werden",
         }
     } else {
         Labels {
@@ -36,6 +38,7 @@ pub fn labels(lang: &str) -> Labels {
             quit: "Quit",
             active: "active",
             no_accounts: "No accounts found",
+            switch_failed: "Couldn't switch account",
         }
     }
 }

@@ -26,24 +26,24 @@ expected behaviour, and status across the audit → test → fix → re-test loo
 
 | ID | Feature | Severity if broken | Spec | Test | Issue | Fixed | Re-test |
 |------|---------|-------------------|:----:|:----:|:-----:|:-----:|:-------:|
-| US-01 | Tray-only operation (no window, stays resident) | High | ✅ | ✅ | — | — | ⬜ |
-| US-02 | List signed-in Steam accounts | High | ✅ | ⚠️ | BUG-1 | ⬜ | ⬜ |
-| US-03 | Show each account's avatar in the menu | Low | ✅ | ✅ | — | — | ⬜ |
-| US-04 | Indicate & pin the active account | Medium | ✅ | ✅ | — | — | ⬜ |
-| US-05 | Switch account in one click | High | ✅ | ⚠️ | BUG-2 | ⬜ | ⬜ |
-| US-06 | Close only the foreground game on switch | High | ✅ | ✅ | — | — | ⬜ |
-| US-07 | Tray icon shows active account avatar + tooltip | Low | ✅ | ✅ | — | — | ⬜ |
-| US-08 | Detect account switches made outside the app | Medium | ✅ | ✅ | — | — | ⬜ |
-| US-09 | Display-name mode (profile vs account name) | Low | ✅ | ✅ | — | — | ⬜ |
-| US-10 | Language setting (English/German) + OS-locale default | Low | ✅ | ✅ | — | — | ⬜ |
-| US-11 | Start with Windows (autostart) toggle + default-on | Medium | ✅ | ✅ | — | — | ⬜ |
-| US-12 | Automatic background updates | Medium | ✅ | ✅ | — | — | ⬜ |
-| US-13 | Single-instance enforcement | Medium | ✅ | ✅ | — | — | ⬜ |
-| US-14 | One-time legacy data migration | Low | ✅ | ✅ | — | — | ⬜ |
-| US-15 | Locate the Steam installation | High | ✅ | ✅ | — | — | ⬜ |
-| US-16 | Empty state when no accounts are found | Medium | ✅ | ✅ | — | — | ⬜ |
-| US-17 | Quit the app | Medium | ✅ | ✅ | — | — | ⬜ |
-| US-18 | Reject unsafe `installdir` in appmanifest (traversal guard) | High | ✅ | ✅ | — | — | ⬜ |
+| US-01 | Tray-only operation (no window, stays resident) | High | ✅ | ✅ | — | — | ✅ |
+| US-02 | List signed-in Steam accounts | High | ✅ | ⚠️ | BUG-1 | ✅ | ✅ |
+| US-03 | Show each account's avatar in the menu | Low | ✅ | ✅ | — | — | ✅ |
+| US-04 | Indicate & pin the active account | Medium | ✅ | ✅ | BUG-3 | ✅ | ✅ |
+| US-05 | Switch account in one click | High | ✅ | ⚠️ | BUG-2 | ✅ | ✅ |
+| US-06 | Close only the foreground game on switch | High | ✅ | ✅ | — | — | ✅ |
+| US-07 | Tray icon shows active account avatar + tooltip | Low | ✅ | ✅ | BUG-3 | ✅ | ✅ |
+| US-08 | Detect account switches made outside the app | Medium | ✅ | ✅ | — | — | ✅ |
+| US-09 | Display-name mode (profile vs account name) | Low | ✅ | ✅ | — | — | ✅ |
+| US-10 | Language setting (English/German) + OS-locale default | Low | ✅ | ✅ | — | — | ✅ |
+| US-11 | Start with Windows (autostart) toggle + default-on | Medium | ✅ | ✅ | — | — | ✅ |
+| US-12 | Automatic background updates | Medium | ✅ | ✅ | — | — | ✅ |
+| US-13 | Single-instance enforcement | Medium | ✅ | ✅ | — | — | ✅ |
+| US-14 | One-time legacy data migration | Low | ✅ | ✅ | BUG-4 | ✅ | ✅ |
+| US-15 | Locate the Steam installation | High | ✅ | ✅ | — | — | ✅ |
+| US-16 | Empty state when no accounts are found | Medium | ✅ | ✅ | — | — | ✅ |
+| US-17 | Quit the app | Medium | ✅ | ✅ | — | — | ✅ |
+| US-18 | Reject unsafe `installdir` in appmanifest (traversal guard) | High | ✅ | ✅ | — | — | ✅ |
 
 ### Test method
 - `cargo test --lib` → 5/5 unit tests pass (US-18 traversal guard directly verified), 1 ignored (needs live Steam).
@@ -283,12 +283,26 @@ beyond the real game directory, **so that** switching can't terminate unrelated 
 
 ## Test results — defects found (phase 2)
 
-| Ref | Title | Story | Type | Severity | Fix decision |
-|-----|-------|-------|------|----------|--------------|
-| BUG-1 | `Account.avatar` base64 data-URL is built on every `list_accounts()` call but never consumed (no `invoke_handler`, frontend is `null`, tray draws icons via `avatar_path`/`round_icon_rgba`). Redundant disk read + base64 of every avatar on every menu rebuild. | US-02/US-03 | Logistical (dead code / wasted I/O) | Medium | **Fix** — drop the field + `avatar_data_url`. |
-| BUG-2 | Switch failures are swallowed (`let _ = switch_account(...)`) and `steam_path() == None` silently does nothing. On a real failure (e.g. Steam fails to close within 5 s) the user clicks, Steam may vanish, and **no message is shown**. | US-05 | UX (silent failure on the primary action) | Medium | **Fix** — surface a native error dialog. |
-| BUG-3 | `refresh()` parses accounts twice — once in `build_menu`, once in `refresh_icon`. Correct, but redundant work. | US-04/US-07 | Logistical (minor perf) | Low | Document; behaviour correct, fold into the BUG-1 fix if cheap. |
-| BUG-4 | clippy: `collapsible_if` (`settings.rs:88`), `unnecessary_sort_by` (`accounts.rs:34`). Not gated by CI (audit only). | — | Code quality | Low | **Fix** — trivial, same files touched. |
+| Ref | Title | Story | Type | Severity | Status |
+|-----|-------|-------|------|----------|--------|
+| BUG-1 | `Account.avatar` base64 data-URL is built on every `list_accounts()` call but never consumed (no `invoke_handler`, frontend is `null`, tray draws icons via `avatar_path`/`round_icon_rgba`). Redundant disk read + base64 of every avatar on every menu rebuild. | US-02/US-03 | Logistical (dead code / wasted I/O) | Medium | ✅ **Fixed** — removed the `avatar` field, the `avatar_data_url` fn, and the now-unused `base64` dependency. |
+| BUG-2 | Switch failures are swallowed (`let _ = switch_account(...)`) and `steam_path() == None` silently does nothing. On a real failure (e.g. Steam fails to close within 5 s) the user clicks, Steam may vanish, and **no message is shown**. | US-05 | UX (silent failure on the primary action) | Medium | ✅ **Fixed** — `switch_to` now captures the `Result` and shows a localized native error dialog (`show_error`, `MessageBoxW`, no new dependency). |
+| BUG-3 | `refresh()` parsed accounts twice — once in `build_menu`, once in `refresh_icon`. Correct, but redundant work. | US-04/US-07 | Logistical (minor perf) | Low | ✅ **Fixed** — `refresh`/`setup` fetch accounts once and pass `&[Account]` to both helpers. |
+| BUG-4 | clippy: `collapsible_if` (`settings.rs:88`), `unnecessary_sort_by` (`accounts.rs:34`). Not gated by CI (audit only). | US-14 | Code quality | Low | ✅ **Fixed** — collapsed the `if`, switched to `sort_by_key(Reverse(..))`. clippy now clean. |
+
+## Re-test results (phase 4)
+
+Re-ran the full verification after the fixes:
+
+- `cargo test --lib` → **5/5 pass**, 1 ignored (unchanged).
+- `cargo clippy --all-targets` → **0 warnings** (both prior lints gone, new FFI clean).
+- `npm run build` → still bundles clean (frontend untouched).
+- **Behaviour re-traced for all 18 stories — no regressions:**
+  - US-02 sort is unchanged semantically (`sort_by_key(Reverse(timestamp))` ≡ descending `Timestamp`); removing the unused `avatar` field does not affect the menu, which never read it.
+  - US-03 / US-07 still render avatars via the untouched `avatar_path` + `round_icon_rgba`.
+  - US-14 migration logic is byte-for-byte equivalent after collapsing the nested `if` (same short-circuit).
+  - US-05 happy path unchanged; only adds a user-visible error dialog on failure.
+- Note: the native error dialog (BUG-2) is verified to compile and the FFI signature is correct; the on-screen dialog itself cannot be asserted in a headless run — it requires a live failed switch on a Windows desktop session.
 
 ## Resolved (verified not a defect)
 - **Version `0.1.0` in source vs `0.1.6` in README** — intentional. `release.yml` rewrites the version from the git tag at build time and `scripts/update-readme-version.mjs` updates the badge; source files are not meant to track releases (per `RELEASING.md`). ✅

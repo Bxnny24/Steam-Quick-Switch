@@ -85,10 +85,11 @@ pub fn migrate_legacy_data(app: &AppHandle) {
             if legacy_data.is_dir() {
                 let legacy_store = legacy_data.join(STORE);
                 let new_store = new_data.join(STORE);
-                if legacy_store.is_file() && !new_store.exists() {
-                    if fs::create_dir_all(&new_data).is_ok() {
-                        let _ = fs::copy(&legacy_store, &new_store);
-                    }
+                if legacy_store.is_file()
+                    && !new_store.exists()
+                    && fs::create_dir_all(&new_data).is_ok()
+                {
+                    let _ = fs::copy(&legacy_store, &new_store);
                 }
                 let _ = fs::remove_dir_all(&legacy_data);
             }

@@ -39,12 +39,11 @@ fn menu_icon(steam_path: &std::path::Path, steam_id64: &str) -> Option<Image<'st
 }
 
 /// Build the full tray menu from the current accounts and settings.
-fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
+fn build_menu(app: &AppHandle, accounts: &[Account]) -> tauri::Result<Menu<Wry>> {
     let lang = settings::language(app);
     let mode = settings::name_mode(app);
     let l = i18n::labels(&lang);
     let steam_path = steam::registry::steam_path();
-    let accounts = steam::list_accounts().unwrap_or_default();
 
     let menu = Menu::new(app)?;
 
@@ -52,7 +51,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         let item = MenuItem::with_id(app, "noop", l.no_accounts, false, None::<&str>)?;
         menu.append(&item)?;
     } else {
-        for account in &accounts {
+        for account in accounts {
             let mut label = display_name(app, account);
             if account.is_current {
                 label = format!("{label}  •  {}", l.active);
@@ -125,19 +124,19 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
 
 /// Rebuild and apply the tray menu and icon. Safe to call repeatedly.
 pub fn refresh(app: &AppHandle) {
-    if let Ok(menu) = build_menu(app) {
+    let accounts = steam::list_accounts().unwrap_or_default();
+    if let Ok(menu) = build_menu(app, &accounts) {
         if let Some(tray) = app.tray_by_id(TRAY_ID) {
             let _ = tray.set_menu(Some(menu));
         }
     }
-    refresh_icon(app);
+    refresh_icon(app, &accounts);
 }
 
-fn refresh_icon(app: &AppHandle) {
+fn refresh_icon(app: &AppHandle, accounts: &[Account]) {
     let Some(tray) = app.tray_by_id(TRAY_ID) else {
         return;
     };
-    let accounts = steam::list_accounts().unwrap_or_default();
     let Some(current) = accounts
         .iter()
         .find(|a| a.is_current)
@@ -157,7 +156,8 @@ fn refresh_icon(app: &AppHandle) {
 
 /// Create the tray icon and menu on startup.
 pub fn setup(app: &AppHandle) -> tauri::Result<()> {
-    let menu = build_menu(app)?;
+    let accounts = steam::list_accounts().unwrap_or_default();
+    let menu = build_menu(app, &accounts)?;
     TrayIconBuilder::with_id(TRAY_ID)
         .icon(app.default_window_icon().unwrap().clone())
         .tooltip("Steam Quick Switch")
@@ -165,7 +165,7 @@ pub fn setup(app: &AppHandle) -> tauri::Result<()> {
         .show_menu_on_left_click(true)
         .on_menu_event(|app, event| handle_menu_event(app, event.id().as_ref()))
         .build(app)?;
-    refresh_icon(app);
+    refresh_icon(app, &accounts);
     start_account_watcher(app);
     Ok(())
 }
@@ -232,10 +232,56 @@ fn switch_to(app: &AppHandle, steam_id64: String) {
     };
     let app = app.clone();
     std::thread::spawn(move || {
-        if let Some(steam_path) = steam::registry::steam_path() {
-            let _ = steam::switch::switch_account(&steam_path, &account.account_name);
+        let result = match steam::registry::steam_path() {
+            Some(steam_path) => steam::switch::switch_account(&steam_path, &account.account_name),
+            None => Err("Steam installation not found.".to_string()),
+        };
+        // Never fail silently: switching is the app's primary action, so surface
+        // any error in a native dialog instead of leaving the user guessing.
+        if let Err(message) = result {
+            let l = i18n::labels(&settings::language(&app));
+            show_error(l.switch_failed, &message);
         }
         let handle = app.clone();
         let _ = app.run_on_main_thread(move || refresh(&handle));
     });
+}
+
+/// Show a native modal error dialog so account-switch failures are never silent.
+/// Windows-only, matching the rest of the app (no extra dependency).
+fn show_error(title: &str, message: &str) {
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+
+    #[link(name = "user32")]
+    extern "system" {
+        fn MessageBoxW(
+            hwnd: *mut core::ffi::c_void,
+            text: *const u16,
+            caption: *const u16,
+            u_type: u32,
+        ) -> i32;
+    }
+
+    fn wide(s: &str) -> Vec<u16> {
+        OsStr::new(s).encode_wide().chain(std::iter::once(0)).collect()
+    }
+
+    const MB_OK: u32 = 0x0000_0000;
+    const MB_ICONERROR: u32 = 0x0000_0010;
+    const MB_SETFOREGROUND: u32 = 0x0001_0000;
+
+    let text = wide(message);
+    let caption = wide(title);
+    // SAFETY: `text` and `caption` are valid NUL-terminated UTF-16 buffers that
+    // live until the call returns; a null owner shows an ownerless modal, which
+    // is what a tray-only app needs.
+    unsafe {
+        MessageBoxW(
+            std::ptr::null_mut(),
+            text.as_ptr(),
+            caption.as_ptr(),
+            MB_OK | MB_ICONERROR | MB_SETFOREGROUND,
+        );
+    }
 }

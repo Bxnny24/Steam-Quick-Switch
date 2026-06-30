@@ -2,8 +2,6 @@
 
 use std::path::{Path, PathBuf};
 
-use base64::Engine;
-
 /// Path to the locally cached avatar PNG for a SteamID64, if it exists.
 pub fn avatar_path(steam_path: &Path, steam_id64: &str) -> Option<PathBuf> {
     let path = steam_path
@@ -11,15 +9,6 @@ pub fn avatar_path(steam_path: &Path, steam_id64: &str) -> Option<PathBuf> {
         .join("avatarcache")
         .join(format!("{steam_id64}.png"));
     path.exists().then_some(path)
-}
-
-/// Read the cached avatar for a SteamID64 and encode it as a PNG data URL,
-/// suitable for an `<img src>` in the frontend.
-pub fn avatar_data_url(steam_path: &Path, steam_id64: &str) -> Option<String> {
-    let path = avatar_path(steam_path, steam_id64)?;
-    let bytes = std::fs::read(&path).ok()?;
-    let encoded = base64::engine::general_purpose::STANDARD.encode(&bytes);
-    Some(format!("data:image/png;base64,{encoded}"))
 }
 
 /// Decode an avatar PNG into a `size`x`size` rounded-square RGBA buffer suitable

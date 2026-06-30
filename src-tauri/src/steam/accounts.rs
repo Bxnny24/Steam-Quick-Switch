@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::steam::{avatar, registry, vdf};
+use crate::steam::{registry, vdf};
 
 /// An account as presented to the UI. Field names are camelCase in JSON.
 #[derive(Debug, Clone, Serialize)]
@@ -16,8 +16,6 @@ pub struct Account {
     pub timestamp: u64,
     /// True if this account is the one Steam will auto-login (the active one).
     pub is_current: bool,
-    /// Base64 PNG data URL of the cached avatar, if available.
-    pub avatar: Option<String>,
 }
 
 /// List all Steam accounts known to this machine — the active account first,
@@ -31,13 +29,12 @@ pub fn list_accounts() -> Result<Vec<Account>, String> {
         .to_lowercase();
 
     let mut users = vdf::parse_login_users(&steam_path)?;
-    users.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+    users.sort_by_key(|u| std::cmp::Reverse(u.timestamp));
 
     let mut accounts: Vec<Account> = users
         .into_iter()
         .map(|u| {
             let is_current = !current.is_empty() && u.account_name.to_lowercase() == current;
-            let avatar = avatar::avatar_data_url(&steam_path, &u.steam_id64);
             Account {
                 steam_id64: u.steam_id64,
                 account_name: u.account_name,
@@ -46,7 +43,6 @@ pub fn list_accounts() -> Result<Vec<Account>, String> {
                 most_recent: u.most_recent,
                 timestamp: u.timestamp,
                 is_current,
-                avatar,
             }
         })
         .collect();
