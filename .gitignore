@@ -40,8 +40,10 @@ src-tauri/gen/
 Thumbs.db
 Desktop.ini
 
-# Claude (local AI assistant config — never tracked)
+# Claude / Codex
 .claude/
+.agents/
+AGENTS.md
 
 # Local docs (not tracked)
 /docs/
