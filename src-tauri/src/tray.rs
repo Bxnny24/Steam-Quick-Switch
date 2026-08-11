@@ -32,13 +32,15 @@ fn display_name(app: &AppHandle, account: &Account) -> String {
     }
 }
 
-/// The rounded avatar icon for an account, if Steam has one cached locally.
+/// The rounded avatar icon for an account. Falls back to Steam's own "no
+/// avatar" placeholder so accounts without a profile picture still get an icon.
 fn avatar_icon(
     steam_path: &std::path::Path,
     steam_id64: &str,
     size: u32,
 ) -> Option<Image<'static>> {
-    let path = steam::avatar::avatar_path(steam_path, steam_id64)?;
+    let path = steam::avatar::avatar_path(steam_path, steam_id64)
+        .or_else(|| steam::avatar::blank_avatar_path(steam_path))?;
     let (rgba, size) = steam::avatar::round_icon_rgba(&path, size)?;
     Some(Image::new_owned(rgba, size, size))
 }

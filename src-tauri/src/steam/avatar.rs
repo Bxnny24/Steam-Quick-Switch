@@ -11,6 +11,15 @@ pub fn avatar_path(steam_path: &Path, steam_id64: &str) -> Option<PathBuf> {
     path.exists().then_some(path)
 }
 
+/// Path to Steam's own "no avatar" placeholder, which ships with the client.
+/// Accounts without a profile picture then get Steam's familiar look instead of
+/// a blank slot. Steam's grey silhouette default lives only on their CDN, so
+/// this local `?` placeholder is the closest offline equivalent.
+pub fn blank_avatar_path(steam_path: &Path) -> Option<PathBuf> {
+    let path = steam_path.join("graphics").join("avatar_184blank.tga");
+    path.exists().then_some(path)
+}
+
 /// Decode an avatar PNG into a `size`x`size` rounded-square RGBA buffer suitable
 /// for a tray icon. Returns `(rgba_bytes, size)`, or `None` if decoding fails.
 pub fn round_icon_rgba(png_path: &Path, size: u32) -> Option<(Vec<u8>, u32)> {
@@ -40,6 +49,27 @@ fn apply_rounded_mask(img: &mut image::RgbaImage, size: u32) {
             let factor = (0.5 - sdf).clamp(0.0, 1.0);
             let px = img.get_pixel_mut(x, y);
             px[3] = (px[3] as f32 * factor) as u8;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Smoke test against the real machine. Ignored by default (needs Steam).
+    /// Verifies the bundled TGA placeholder is found and decodes at icon sizes.
+    /// Run with: cargo test -- --ignored --nocapture blank_avatar_decodes
+    #[test]
+    #[ignore]
+    fn blank_avatar_decodes() {
+        let steam = crate::steam::registry::steam_path().expect("Steam not found");
+        let path = blank_avatar_path(&steam).expect("avatar_184blank.tga missing");
+        println!("placeholder: {}", path.display());
+        for size in [18u32, 32] {
+            let (rgba, decoded) = round_icon_rgba(&path, size).expect("TGA decode failed");
+            assert_eq!(decoded, size);
+            assert_eq!(rgba.len(), (size * size * 4) as usize);
         }
     }
 }
