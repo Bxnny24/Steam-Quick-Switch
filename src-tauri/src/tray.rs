@@ -32,9 +32,16 @@ fn display_name(app: &AppHandle, account: &Account) -> String {
     }
 }
 
-fn menu_icon(steam_path: &std::path::Path, steam_id64: &str) -> Option<Image<'static>> {
-    let path = steam::avatar::avatar_path(steam_path, steam_id64)?;
-    let (rgba, size) = steam::avatar::round_icon_rgba(&path, MENU_ICON_SIZE)?;
+/// The rounded avatar icon for an account. Falls back to Steam's own "no
+/// avatar" placeholder so accounts without a profile picture still get an icon.
+fn avatar_icon(
+    steam_path: &std::path::Path,
+    steam_id64: &str,
+    size: u32,
+) -> Option<Image<'static>> {
+    let path = steam::avatar::avatar_path(steam_path, steam_id64)
+        .or_else(|| steam::avatar::blank_avatar_path(steam_path))?;
+    let (rgba, size) = steam::avatar::round_icon_rgba(&path, size)?;
     Some(Image::new_owned(rgba, size, size))
 }
 
@@ -58,7 +65,7 @@ fn build_menu(app: &AppHandle, accounts: &[Account]) -> tauri::Result<Menu<Wry>>
             }
             let icon = steam_path
                 .as_deref()
-                .and_then(|p| menu_icon(p, &account.steam_id64));
+                .and_then(|p| avatar_icon(p, &account.steam_id64, MENU_ICON_SIZE));
             let item = IconMenuItem::with_id(
                 app,
                 format!("switch:{}", account.steam_id64),
@@ -145,12 +152,14 @@ fn refresh_icon(app: &AppHandle, accounts: &[Account]) {
         return;
     };
     let _ = tray.set_tooltip(Some(display_name(app, current)));
-    if let Some(steam_path) = steam::registry::steam_path() {
-        if let Some(path) = steam::avatar::avatar_path(&steam_path, &current.steam_id64) {
-            if let Some((rgba, size)) = steam::avatar::round_icon_rgba(&path, TRAY_ICON_SIZE) {
-                let _ = tray.set_icon(Some(Image::new_owned(rgba, size, size)));
-            }
-        }
+    // Always replace the icon, never just skip on failure: an account without a
+    // cached avatar would otherwise keep showing the previous account's picture.
+    let icon = steam::registry::steam_path()
+        .as_deref()
+        .and_then(|p| avatar_icon(p, &current.steam_id64, TRAY_ICON_SIZE))
+        .or_else(|| app.default_window_icon().cloned().map(Image::to_owned));
+    if let Some(icon) = icon {
+        let _ = tray.set_icon(Some(icon));
     }
 }
 
