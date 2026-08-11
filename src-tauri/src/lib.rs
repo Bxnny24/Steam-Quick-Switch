@@ -42,6 +42,14 @@ pub fn run() {
 }
 
 async fn try_update(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
+    // Never auto-update a development build. The version in tauri.conf.json is a
+    // placeholder (the real one is injected at release time), so a local build
+    // always looks outdated: it would download the latest release, install it
+    // over the user's installation and restart into it — replacing the very
+    // build you are trying to test.
+    if cfg!(debug_assertions) {
+        return Ok(());
+    }
     if let Some(update) = app.updater()?.check().await? {
         update.download_and_install(|_, _| {}, || {}).await?;
         app.restart();
