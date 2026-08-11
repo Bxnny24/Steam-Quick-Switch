@@ -54,8 +54,8 @@ git push origin v0.1.2
 
 The **Release** workflow writes the version (from the tag) into
 `tauri.conf.json`, `package.json` and `Cargo.toml`, builds the Windows installer
-(NSIS + MSI), signs the update artifacts, and publishes a GitHub Release with the
-installers and `latest.json`.
+(NSIS), signs the update artifacts, and publishes a GitHub Release with the
+installer and `latest.json`.
 
 > The tag (e.g. `v0.1.2`) must be a **higher** version than what users have
 > installed, otherwise the updater sees no newer version and does nothing.
