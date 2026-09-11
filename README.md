@@ -24,7 +24,7 @@ to open.
 - **Right- or left-click the tray icon** to see all your saved Steam accounts, each with its avatar
 - **Click an account to switch** — Steam restarts and logs straight into it, no password retyping
 - The **tray icon itself is the avatar** of the account you're currently on
-- **Settings right in the tray menu:** language (English/German), display name (profile or account name), and start with Windows
+- **Settings right in the tray menu:** language (English/German), display name (profile or account name), sort order (last used or name), and start with Windows
 - **Updates itself automatically**
 
 ---
