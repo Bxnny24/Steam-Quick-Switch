@@ -23,7 +23,8 @@ Constraints:
 - `src-tauri/src/` — Rust backend (the whole app):
   - `steam/` — registry lookup, `loginusers.vdf` parsing, avatars, switching
   - `tray.rs` — native tray menu (accounts + settings) and the dynamic icon
-  - `settings.rs` — `settings.json` via the store plugin (`language`, `nameMode`)
+  - `settings.rs` — `settings.json` via the store plugin (`language`, `nameMode`,
+    `sortMode`)
   - `i18n.rs` — English/German menu labels
   - `lib.rs` — app entry, plugin registration, background update check
 - `src/` — minimal React shell; no window is shown, it only satisfies the build
@@ -41,7 +42,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 ## Settings & data
 
 Stored in `%AppData%\Roaming\steam-quick-switch\settings.json`
-(`language`, `nameMode`).
+(`language`, `nameMode`, `sortMode`).
 
 ## Releasing
 

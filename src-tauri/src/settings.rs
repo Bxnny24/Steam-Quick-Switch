@@ -58,6 +58,28 @@ pub fn set_name_mode(app: &AppHandle, mode: &str) {
     }
 }
 
+/// How the menu orders accounts: "recent" (active account first, then
+/// most-recently-used) or "name" (alphabetical).
+pub fn sort_mode(app: &AppHandle) -> String {
+    if let Ok(store) = app.store(STORE) {
+        if let Some(value) = store.get("sortMode") {
+            if let Some(s) = value.as_str() {
+                if s == "recent" || s == "name" {
+                    return s.to_string();
+                }
+            }
+        }
+    }
+    "recent".to_string()
+}
+
+pub fn set_sort_mode(app: &AppHandle, mode: &str) {
+    if let Ok(store) = app.store(STORE) {
+        store.set("sortMode", json!(mode));
+        let _ = store.save();
+    }
+}
+
 /// On first run, enable "start with Windows" by default (once). If the user
 /// later turns it off, it is not re-enabled.
 pub fn ensure_autostart_default(app: &AppHandle) {
