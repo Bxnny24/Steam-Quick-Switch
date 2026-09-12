@@ -14,7 +14,6 @@ pub struct Labels {
     pub active: &'static str,
     pub no_accounts: &'static str,
     pub switch_failed: &'static str,
-    pub login_required: &'static str,
     pub login_required_title: &'static str,
     pub login_required_prompt: &'static str,
 }
@@ -35,7 +34,6 @@ pub fn labels(lang: &str) -> Labels {
             active: "aktiv",
             no_accounts: "Keine Konten gefunden",
             switch_failed: "Konto konnte nicht gewechselt werden",
-            login_required: "Anmeldung nötig",
             login_required_title: "Kein gespeicherter Steam-Login",
             login_required_prompt: concat!(
                 "Steam listet dieses Konto noch, hat aber keine gespeicherten ",
@@ -59,7 +57,6 @@ pub fn labels(lang: &str) -> Labels {
             active: "active",
             no_accounts: "No accounts found",
             switch_failed: "Couldn't switch account",
-            login_required: "login required",
             login_required_title: "No saved Steam login",
             login_required_prompt: concat!(
                 "Steam still lists this account but has no saved credentials for ",
