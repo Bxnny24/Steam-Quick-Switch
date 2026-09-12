@@ -57,6 +57,31 @@ The **Release** workflow writes the version (from the tag) into
 (NSIS), signs the update artifacts, and publishes a GitHub Release with the
 installer and `latest.json`.
 
+## Release description
+
+The body of every GitHub Release is a short **bullet list of what changed in
+that version** — nothing else. No headings, no compare link, no contributor
+handles, no pull request numbers or links:
+
+```
+- fix(tray): re-register the tray icon if Windows rejected it at startup
+- feat(tray): add a sort order setting for the account list
+```
+
+The workflow asks GitHub's `releases/generate-notes` API for the entries and
+strips the rest away, so there is no file to maintain. The release build fails
+rather than publishing anything that does not look like that: a handle or link
+surviving the filter, or no entries at all.
+
+Two things follow from that:
+
+- **Land user-facing changes through a pull request.** Commits pushed straight
+  to `main` do not appear in the generated notes.
+- **The PR title is the changelog entry.** Write it for someone reading the
+  release page, not for the diff.
+
+What the app *does* belongs in the README, not in every release body.
+
 > The tag (e.g. `v0.1.2`) must be a **higher** version than what users have
 > installed, otherwise the updater sees no newer version and does nothing.
 
