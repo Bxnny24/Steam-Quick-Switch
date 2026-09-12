@@ -23,6 +23,12 @@ const WATCH_INTERVAL: Duration = Duration::from_secs(3);
 /// really reached the notification area (see `start_registration_guard`).
 const REGISTRATION_CHECKS: u32 = 5;
 const REGISTRATION_INTERVAL: Duration = Duration::from_secs(12);
+/// Marks an account Steam has no saved login for. A native menu item has one
+/// icon slot, already taken by the avatar, and Win32 menu items have no
+/// tooltips — so the hint has to live in the label. `U+26A0` without the emoji
+/// variation selector keeps it a one-character monochrome glyph instead of
+/// widening every row with a phrase; the confirmation dialog explains it.
+const LOGIN_REQUIRED_MARK: &str = "\u{26a0}";
 
 /// Display name: Steam profile name or account name, per the user's setting.
 fn display_name(app: &AppHandle, account: &Account) -> String {
@@ -104,8 +110,8 @@ fn build_menu(app: &AppHandle, accounts: &[Account]) -> tauri::Result<Menu<Wry>>
                 label = format!("{label}  •  {}", l.active);
             } else if !account.has_cached_login {
                 // Steam still lists this account but has no saved login for it,
-                // so a switch would land on the login screen. Say so up front.
-                label = format!("{label}  •  {}", l.login_required);
+                // so a switch would land on the login screen. Flag it up front.
+                label = format!("{label}  {LOGIN_REQUIRED_MARK}");
             }
             let icon = steam_path
                 .as_deref()

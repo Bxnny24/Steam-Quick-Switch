@@ -47,9 +47,9 @@ to open.
 - Only accounts where you ticked **"Remember my password"** in Steam can be
   switched without re-entering credentials.
 - Accounts Steam no longer has a saved login for — typically after a Steam
-  reinstall — are marked **"login required"** in the menu, and switching to one
-  asks for confirmation first. Sign in to it once in Steam and it switches
-  silently again.
+  reinstall — are marked with a **⚠** in the menu, and switching to one asks for
+  confirmation first. Sign in to it once in Steam and it switches silently
+  again.
 - Switching **closes and reopens Steam**.
 - If an account uses **Steam Guard / 2FA**, Steam may still ask for the code —
   that's normal and can't be skipped.
