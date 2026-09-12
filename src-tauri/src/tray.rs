@@ -102,6 +102,10 @@ fn build_menu(app: &AppHandle, accounts: &[Account]) -> tauri::Result<Menu<Wry>>
             let mut label = display_name(app, account);
             if account.is_current {
                 label = format!("{label}  •  {}", l.active);
+            } else if !account.has_cached_login {
+                // Steam still lists this account but has no saved login for it,
+                // so a switch would land on the login screen. Say so up front.
+                label = format!("{label}  •  {}", l.login_required);
             }
             let icon = steam_path
                 .as_deref()
@@ -361,6 +365,17 @@ fn switch_to(app: &AppHandle, steam_id64: String) {
     };
     let app = app.clone();
     std::thread::spawn(move || {
+        let l = i18n::labels(&settings::language(&app));
+
+        // Steam has no saved login for this account, so the switch would close
+        // the running game and then stop at the Steam login screen. Ask first
+        // rather than springing that on the user. The dialog blocks this worker
+        // thread only, so the tray stays responsive while it is open.
+        if !account.has_cached_login && !confirm(l.login_required_title, &login_prompt(&account, &l))
+        {
+            return;
+        }
+
         let result = match steam::registry::steam_path() {
             Some(steam_path) => steam::switch::switch_account(&steam_path, &account.account_name),
             None => Err("Steam installation not found.".to_string()),
@@ -368,7 +383,6 @@ fn switch_to(app: &AppHandle, steam_id64: String) {
         // Never fail silently: switching is the app's primary action, so surface
         // any error in a native dialog instead of leaving the user guessing.
         if let Err(message) = result {
-            let l = i18n::labels(&settings::language(&app));
             show_error(l.switch_failed, &message);
         }
         let handle = app.clone();
@@ -376,9 +390,37 @@ fn switch_to(app: &AppHandle, steam_id64: String) {
     });
 }
 
+/// The body of the "no saved login" confirmation: which account is affected,
+/// then the localized explanation. The account name is named explicitly because
+/// the dialog is ownerless and carries no other context.
+fn login_prompt(account: &Account, l: &i18n::Labels) -> String {
+    let name = if account.persona_name.trim().is_empty() {
+        account.account_name.clone()
+    } else {
+        format!("{} ({})", account.persona_name, account.account_name)
+    };
+    format!("{name}\n\n{}", l.login_required_prompt)
+}
+
 /// Show a native modal error dialog so account-switch failures are never silent.
-/// Windows-only, matching the rest of the app (no extra dependency).
 fn show_error(title: &str, message: &str) {
+    const MB_OK: u32 = 0x0000_0000;
+    const MB_ICONERROR: u32 = 0x0000_0010;
+    message_box(title, message, MB_OK | MB_ICONERROR);
+}
+
+/// Ask a yes/no question in a native modal dialog; `true` means the user
+/// confirmed. Used before a switch Steam cannot complete without a password.
+fn confirm(title: &str, message: &str) -> bool {
+    const MB_YESNO: u32 = 0x0000_0004;
+    const MB_ICONWARNING: u32 = 0x0000_0030;
+    const IDYES: i32 = 6;
+    message_box(title, message, MB_YESNO | MB_ICONWARNING) == IDYES
+}
+
+/// `MessageBoxW` wrapper returning the raw dialog result. Windows-only,
+/// matching the rest of the app (no extra dependency).
+fn message_box(title: &str, message: &str, style: u32) -> i32 {
     use std::ffi::OsStr;
     use std::os::windows::ffi::OsStrExt;
 
@@ -396,8 +438,6 @@ fn show_error(title: &str, message: &str) {
         OsStr::new(s).encode_wide().chain(std::iter::once(0)).collect()
     }
 
-    const MB_OK: u32 = 0x0000_0000;
-    const MB_ICONERROR: u32 = 0x0000_0010;
     const MB_SETFOREGROUND: u32 = 0x0001_0000;
 
     let text = wide(message);
@@ -410,7 +450,7 @@ fn show_error(title: &str, message: &str) {
             std::ptr::null_mut(),
             text.as_ptr(),
             caption.as_ptr(),
-            MB_OK | MB_ICONERROR | MB_SETFOREGROUND,
-        );
+            style | MB_SETFOREGROUND,
+        )
     }
 }

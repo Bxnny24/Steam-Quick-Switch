@@ -2,6 +2,7 @@
 
 pub mod accounts;
 pub mod avatar;
+pub mod credentials;
 pub mod registry;
 pub mod switch;
 pub mod vdf;

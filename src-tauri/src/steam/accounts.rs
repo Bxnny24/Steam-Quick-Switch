@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::steam::{registry, vdf};
+use crate::steam::{credentials, registry, vdf};
 
 /// An account as presented to the UI. Field names are camelCase in JSON.
 #[derive(Debug, Clone, Serialize)]
@@ -16,6 +16,13 @@ pub struct Account {
     pub timestamp: u64,
     /// True if this account is the one Steam will auto-login (the active one).
     pub is_current: bool,
+    /// True if Steam still has a saved login for this account, i.e. a switch
+    /// signs in without a password prompt. False means the account survives in
+    /// `loginusers.vdf` but its credentials are gone (typically after a Steam
+    /// reinstall), so switching would land on the Steam login screen.
+    /// Defaults to true whenever the credential store cannot be read, so an
+    /// unreadable `config.vdf` never mislabels every account.
+    pub has_cached_login: bool,
 }
 
 /// List all Steam accounts known to this machine — the active account first,
@@ -28,6 +35,10 @@ pub fn list_accounts() -> Result<Vec<Account>, String> {
         .unwrap_or_default()
         .to_lowercase();
 
+    // Which accounts Steam can still log in without a password. `None` means
+    // the store could not be read; every account is then assumed fine.
+    let cached = credentials::cached_logins(&steam_path);
+
     let mut users = vdf::parse_login_users(&steam_path)?;
     users.sort_by_key(|u| std::cmp::Reverse(u.timestamp));
 
@@ -35,6 +46,9 @@ pub fn list_accounts() -> Result<Vec<Account>, String> {
         .into_iter()
         .map(|u| {
             let is_current = !current.is_empty() && u.account_name.to_lowercase() == current;
+            let has_cached_login = cached
+                .as_ref()
+                .is_none_or(|c| c.contains(&u.account_name, &u.steam_id64));
             Account {
                 steam_id64: u.steam_id64,
                 account_name: u.account_name,
@@ -43,6 +57,7 @@ pub fn list_accounts() -> Result<Vec<Account>, String> {
                 most_recent: u.most_recent,
                 timestamp: u.timestamp,
                 is_current,
+                has_cached_login,
             }
         })
         .collect();
@@ -65,12 +80,13 @@ mod tests {
         let accounts = list_accounts().expect("list_accounts failed");
         for a in &accounts {
             println!(
-                "{} | account={} persona={:?} remember={} current={} ts={}",
+                "{} | account={} persona={:?} remember={} current={} cached={} ts={}",
                 a.steam_id64,
                 a.account_name,
                 a.persona_name,
                 a.remember_password,
                 a.is_current,
+                a.has_cached_login,
                 a.timestamp
             );
         }
