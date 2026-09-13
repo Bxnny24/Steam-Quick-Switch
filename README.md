@@ -50,6 +50,10 @@ to open.
   reinstall — are marked with a **⚠** in the menu. Clicking one still switches
   right away; Steam will just ask for the password. Sign in to it once and it
   switches silently again.
+- **Settings → Remove account** takes an account off Steam's saved-account list
+  — handy for accounts you can no longer sign in to. Steam keeps running; its
+  own account picker catches up the next time Steam starts. Signing in to the
+  account again brings it back.
 - Switching **closes and reopens Steam**.
 - If an account uses **Steam Guard / 2FA**, Steam may still ask for the code —
   that's normal and can't be skipped.

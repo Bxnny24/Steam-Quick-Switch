@@ -14,6 +14,9 @@ pub struct Labels {
     pub active: &'static str,
     pub no_accounts: &'static str,
     pub switch_failed: &'static str,
+    pub remove_account: &'static str,
+    pub remove_none: &'static str,
+    pub remove_failed: &'static str,
 }
 
 pub fn labels(lang: &str) -> Labels {
@@ -32,6 +35,9 @@ pub fn labels(lang: &str) -> Labels {
             active: "aktiv",
             no_accounts: "Keine Konten gefunden",
             switch_failed: "Konto konnte nicht gewechselt werden",
+            remove_account: "Konto entfernen",
+            remove_none: "Keine weiteren Konten",
+            remove_failed: "Konto konnte nicht entfernt werden",
         }
     } else {
         Labels {
@@ -48,6 +54,9 @@ pub fn labels(lang: &str) -> Labels {
             active: "active",
             no_accounts: "No accounts found",
             switch_failed: "Couldn't switch account",
+            remove_account: "Remove account",
+            remove_none: "No other accounts",
+            remove_failed: "Couldn't remove account",
         }
     }
 }
