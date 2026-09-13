@@ -1,7 +1,7 @@
 //! System tray — the entire UI. A native menu lists all Steam accounts (with
 //! avatars) plus settings, and the tray icon shows the active account's avatar.
 
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use tauri::{
     image::Image,
@@ -27,7 +27,7 @@ const REGISTRATION_INTERVAL: Duration = Duration::from_secs(12);
 /// icon slot, already taken by the avatar, and Win32 menu items have no
 /// tooltips — so the hint has to live in the label. `U+26A0` without the emoji
 /// variation selector keeps it a one-character monochrome glyph instead of
-/// widening every row with a phrase; the confirmation dialog explains it.
+/// widening every row with a phrase.
 const LOGIN_REQUIRED_MARK: &str = "\u{26a0}";
 
 /// Display name: Steam profile name or account name, per the user's setting.
@@ -74,6 +74,24 @@ fn sort_key(name: &str) -> String {
         }
     }
     key
+}
+
+/// Label for an account in the "Remove account" submenu.
+///
+/// Always names the login, independent of the display-name setting: profile
+/// names are free text and often shared (two accounts called "." on one
+/// machine is real), and which entry gets removed must never be a guess.
+fn removal_label(account: &Account) -> String {
+    let persona = account.persona_name.trim();
+    let mut label = if persona.is_empty() || persona == account.account_name {
+        account.account_name.clone()
+    } else {
+        format!("{persona}  ({})", account.account_name)
+    };
+    if !account.has_cached_login {
+        label = format!("{label}  {LOGIN_REQUIRED_MARK}");
+    }
+    label
 }
 
 /// The rounded avatar icon for an account. Falls back to Steam's own "no
@@ -186,11 +204,35 @@ fn build_menu(app: &AppHandle, accounts: &[Account]) -> tauri::Result<Menu<Wry>>
     let autostart =
         CheckMenuItem::with_id(app, "autostart", l.autostart, true, autostart_on, None::<&str>)?;
 
+    // Removing has no confirmation dialog, so it sits two levels deep behind a
+    // separator rather than beside the switch entries, where a slipped click
+    // would take an account off the list. The active account is not offered.
+    let mut remove_builder = SubmenuBuilder::new(app, l.remove_account);
+    let removable: Vec<&Account> = ordered.iter().copied().filter(|a| !a.is_current).collect();
+    if removable.is_empty() {
+        let none = MenuItem::with_id(app, "noop", l.remove_none, false, None::<&str>)?;
+        remove_builder = remove_builder.item(&none);
+    } else {
+        for account in removable {
+            let item = MenuItem::with_id(
+                app,
+                format!("remove:{}", account.steam_id64),
+                removal_label(account),
+                true,
+                None::<&str>,
+            )?;
+            remove_builder = remove_builder.item(&item);
+        }
+    }
+    let remove_menu = remove_builder.build()?;
+
     let settings_menu = SubmenuBuilder::new(app, l.settings)
         .item(&lang_menu)
         .item(&name_menu)
         .item(&sort_menu)
         .item(&autostart)
+        .separator()
+        .item(&remove_menu)
         .build()?;
     menu.append(&settings_menu)?;
 
@@ -316,15 +358,32 @@ fn current_account_key() -> String {
         .to_lowercase()
 }
 
-/// Watch for account switches made outside this app (Steam itself or other
-/// tools) and refresh the tray whenever the active account changes.
+/// When Steam last wrote its saved-account list. `None` while Steam or the file
+/// cannot be found.
+fn login_users_modified() -> Option<SystemTime> {
+    let steam_path = steam::registry::steam_path()?;
+    std::fs::metadata(steam::vdf::login_users_path(&steam_path))
+        .and_then(|meta| meta.modified())
+        .ok()
+}
+
+/// Watch for changes made outside this app and refresh the tray when one
+/// lands: the active account switching (Steam itself or other tools), or the
+/// saved-account list being rewritten.
+///
+/// Watching `AutoLoginUser` alone missed removals. Deleting an entry from
+/// `loginusers.vdf` — through Steam's own "Remove Account" or by hand — leaves
+/// the registry untouched, so the menu kept the account until the app
+/// restarted, while additions showed up at once because they always come with
+/// a sign-in. The file check is one metadata call per poll; nothing is parsed
+/// unless it changed.
 fn start_account_watcher(app: &AppHandle) {
     let app = app.clone();
     std::thread::spawn(move || {
-        let mut last = current_account_key();
+        let mut last = (current_account_key(), login_users_modified());
         loop {
             std::thread::sleep(WATCH_INTERVAL);
-            let now = current_account_key();
+            let now = (current_account_key(), login_users_modified());
             if now != last {
                 last = now;
                 let handle = app.clone();
@@ -337,6 +396,8 @@ fn start_account_watcher(app: &AppHandle) {
 fn handle_menu_event(app: &AppHandle, id: &str) {
     if let Some(steam_id64) = id.strip_prefix("switch:") {
         switch_to(app, steam_id64.to_string());
+    } else if let Some(steam_id64) = id.strip_prefix("remove:") {
+        remove_account(app, steam_id64.to_string());
     } else if id == "lang:en" {
         settings::set_language(app, "en");
         refresh(app);
@@ -395,8 +456,38 @@ fn switch_to(app: &AppHandle, steam_id64: String) {
     });
 }
 
-/// Show a native modal error dialog so account-switch failures are never silent.
-/// This is the app's only dialog: a switch itself never asks anything.
+/// Remove an account from Steam's saved-account list off the main thread, then
+/// refresh the tray.
+///
+/// Steam keeps running: only `loginusers.vdf` changes, and the removal survives
+/// Steam restarts (see `steam::vdf`). Steam's own account picker keeps showing
+/// the account until Steam next starts — which every switch through this app
+/// does anyway. The active account is never removed; that is re-checked here
+/// because it may have become active after the menu was built.
+fn remove_account(app: &AppHandle, steam_id64: String) {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let accounts = steam::list_accounts().unwrap_or_default();
+        let removable = accounts
+            .iter()
+            .any(|a| a.steam_id64 == steam_id64 && !a.is_current);
+        if removable {
+            let result = match steam::registry::steam_path() {
+                Some(steam_path) => steam::vdf::remove_login_user(&steam_path, &steam_id64),
+                None => Err("Steam installation not found.".to_string()),
+            };
+            if let Err(message) = result {
+                let l = i18n::labels(&settings::language(&app));
+                show_error(l.remove_failed, &message);
+            }
+        }
+        let handle = app.clone();
+        let _ = app.run_on_main_thread(move || refresh(&handle));
+    });
+}
+
+/// Show a native modal error dialog so a failed switch or removal is never
+/// silent. This is the app's only dialog: switching and removing never ask.
 /// Windows-only, matching the rest of the app (no extra dependency).
 fn show_error(title: &str, message: &str) {
     use std::ffi::OsStr;
