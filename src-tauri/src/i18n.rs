@@ -14,8 +14,6 @@ pub struct Labels {
     pub active: &'static str,
     pub no_accounts: &'static str,
     pub switch_failed: &'static str,
-    pub login_required_title: &'static str,
-    pub login_required_prompt: &'static str,
 }
 
 pub fn labels(lang: &str) -> Labels {
@@ -34,13 +32,6 @@ pub fn labels(lang: &str) -> Labels {
             active: "aktiv",
             no_accounts: "Keine Konten gefunden",
             switch_failed: "Konto konnte nicht gewechselt werden",
-            login_required_title: "Kein gespeicherter Steam-Login",
-            login_required_prompt: concat!(
-                "Steam listet dieses Konto noch, hat aber keine gespeicherten ",
-                "Anmeldedaten dafür (z. B. nach einer Steam-Neuinstallation).\n\n",
-                "Beim Wechsel fragt Steam nach Passwort und Steam Guard. Danach ist ",
-                "das Konto wieder ohne Nachfrage wechselbar.\n\nTrotzdem wechseln?"
-            ),
         }
     } else {
         Labels {
@@ -57,14 +48,6 @@ pub fn labels(lang: &str) -> Labels {
             active: "active",
             no_accounts: "No accounts found",
             switch_failed: "Couldn't switch account",
-            login_required_title: "No saved Steam login",
-            login_required_prompt: concat!(
-                "Steam still lists this account but has no saved credentials for ",
-                "it (typically after a Steam reinstall).\n\n",
-                "Switching will make Steam ask for the password and Steam Guard. ",
-                "After that the account switches without a prompt again.",
-                "\n\nSwitch anyway?"
-            ),
         }
     }
 }
